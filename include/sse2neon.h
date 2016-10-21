@@ -89,8 +89,21 @@ INLINE __m128i _mm_subs_epu16 (__m128i a, __m128i b)
 	return (__m128i)vqsubq_u16((uint16x8_t) a, (uint16x8_t) b);
 }
 
+/***************************************************************************
+ *                logic
+ ***************************************************************************/
 
+INLINE __m128i _mm_xor_si128(__m128i a, __m128i b)
+{
+/* Computes the bitwise XOR of the 128-bit value in a and the 128-bit value in b. */
+	return veorq_s32(a, b);
+}
 
+INLINE __m128i _mm_cmpgt_epi8 (__m128i a, __m128i b)
+{
+/* Compares the 16 signed 8-bit integers in a and the 16 signed 8-bit integers in b for greater than. */
+	return (__m128i)vcgtq_s8((int8x16_t) a,( int8x16_t) b);
+}
 /***************************************************************************
  *                load and store
  ***************************************************************************/
@@ -158,7 +171,11 @@ INLINE __m128i _mm_cvtsi32_si128(int a)
 	__m128i result = vdupq_n_s32(0);
 	return vsetq_lane_s32(a, result, 0);
 }
-
+INLINE __m128i _mm_set1_epi8 (char b)
+{
+/* Sets the 16 signed 8-bit integer values to b. */
+	return (__m128i)vdupq_n_s8((int8_t)b);
+}
 /***************************************************************************
  *                GET 
  ***************************************************************************/

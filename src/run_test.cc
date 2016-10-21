@@ -381,25 +381,32 @@ TEST(STORE,_mm_storel_epi64,INTEGER)
 TEST(LOAD,_mm_load_ss,FLOAT)
 TEST(STORE,_mm_store_ss,FLOAT)
 
+TEST(SET,_mm_set1_epi8,INTEGER)
+TEST(BI,_mm_xor_si128,INTEGER)
+TEST(BI,_mm_cmpgt_epi8,INTEGER)
+
 int main()
 {
-	BI_RUN(_mm_max_epu8,t0);
-	BI_RUN(_mm_max_epi16,t1);
-	BI_RUN(_mm_max_ps,t2);
-	BI_RUN(_mm_min_epu8,t3);
-	BI_RUN(_mm_min_epi16,t4);
-	BI_RUN(_mm_min_ps,t5);
-	BI_RUN(_mm_add_epi16,t6);
-	BI_RUN(_mm_sub_epi16,t7);
-	BI_RUN(_mm_adds_epu16,t8);
+//	BI_RUN(_mm_max_epu8,t0);
+//	BI_RUN(_mm_max_epi16,t1);
+//	BI_RUN(_mm_max_ps,t2);
+//	BI_RUN(_mm_min_epu8,t3);
+//	BI_RUN(_mm_min_epi16,t4);
+//	BI_RUN(_mm_min_ps,t5);
+//	BI_RUN(_mm_add_epi16,t6);
+//	BI_RUN(_mm_sub_epi16,t7);
+//	BI_RUN(_mm_adds_epu16,t8);
+//
+//	SET_RUN(_mm_cvtsi32_si128,t9);
+//	GET_RUN(_mm_cvtsi128_si32,t10);
+//	LOAD_RUN(_mm_loadl_epi64,t11);
+//	STORE_RUN(_mm_storel_epi64,t12);
+//	LOAD_RUN(_mm_load_ss,t13);
+//	STORE_RUN(_mm_store_ss,t14);
 
-	SET_RUN(_mm_cvtsi32_si128,t9);
-	GET_RUN(_mm_cvtsi128_si32,t10);
-	LOAD_RUN(_mm_loadl_epi64,t11);
-	STORE_RUN(_mm_storel_epi64,t12);
-	LOAD_RUN(_mm_load_ss,t13);
-	STORE_RUN(_mm_store_ss,t14);
-
+	SET_RUN(_mm_set1_epi8,t15);
+	BI_RUN(_mm_xor_si128,t16);
+	BI_RUN(_mm_cmpgt_epi8,t17);
 
 	return 0;
 
