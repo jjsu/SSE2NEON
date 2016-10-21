@@ -384,6 +384,15 @@ TEST(STORE,_mm_store_ss,FLOAT)
 TEST(SET,_mm_set1_epi8,INTEGER)
 TEST(BI,_mm_xor_si128,INTEGER)
 TEST(BI,_mm_cmpgt_epi8,INTEGER)
+TEST(BI,_mm_and_si128,INTEGER)
+TEST(BI,_mm_andnot_si128,INTEGER)
+TEST(BI,_mm_subs_epu8,INTEGER)
+TEST(SET,_mm_set1_epi16,INTEGER)
+TEST(BI,_mm_cmpgt_epi16,INTEGER)
+TEST(SET,_mm_set1_ps,FLOAT)
+TEST(BI,_mm_cmpgt_ps,FLOAT)
+TEST(BI,_mm_and_ps,FLOAT)
+TEST(BI,_mm_cmple_ps,FLOAT)
 
 int main()
 {
@@ -407,6 +416,15 @@ int main()
 	SET_RUN(_mm_set1_epi8,t15);
 	BI_RUN(_mm_xor_si128,t16);
 	BI_RUN(_mm_cmpgt_epi8,t17);
+	BI_RUN(_mm_and_si128,t18);
+	BI_RUN(_mm_andnot_si128,t19);
+	BI_RUN(_mm_subs_epu8,t20);
+	SET_RUN(_mm_set1_epi16,t21);
+	BI_RUN(_mm_cmpgt_epi16,t22);
+	SET_RUN(_mm_set1_ps,t23);
+	BI_RUN(_mm_cmpgt_ps,t24);
+	BI_RUN(_mm_and_ps,t25);
+	BI_RUN(_mm_cmple_ps,t26);
 
 	return 0;
 

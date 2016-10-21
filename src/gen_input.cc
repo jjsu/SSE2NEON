@@ -24,7 +24,7 @@ int main()
 
 	std::ofstream out("input");
 
-	for(int j=0;j<2*30;j++)
+	for(int j=0;j<2*64;j++)
 	{
 		for(int i=0;i<32;i++)
 		{
