@@ -159,8 +159,8 @@ void print(std::string s, double  *a, int n)
 						_mm_store_ ## SUBFIX(( PTR_TYPE *)c,t);				\
 					else													\
 						_mm_storeu_ ## SUBFIX((PTR_TYPE *)c,t);				\
-					print("\ta        ", a, N);										\
-					print("\tb        ", b, N);										\
+					print("\ta        ", a, N);								\
+					print("\tb        ", b, N);								\
 					print("\tc=OP(a,b)", c, N);								\
 				}															\
 	}
@@ -282,6 +282,664 @@ void print(std::string s, double  *a, int n)
 		}															\
 	}
 
+#define ZE_TEST_DEFINE(FUNC,TYPE,SUBFIX,PTR_TYPE,VAL_TYPE)					\
+	void test_ ## FUNC ## _ ##TYPE() {										\
+		std:: cout << "function : "<< __FUNCTION__ << std::endl;			\
+		const int   N = 16 / sizeof(TYPE);									\
+		char CV_DECL_ALIGNED(16)  buf2[32];									\
+		int count = 0;														\
+		for (size_t k = 0; k < N; k++)								\
+		{															\
+			std:: cout << "iter."<< count++<<" : " << std::endl;	\
+			TYPE* c = (TYPE*)(buf2)+k;								\
+			std::cout << "\t(c) offset : ("						\
+				<< k << ")" << std::endl;							\
+			VAL_TYPE t;										\
+																	\
+																	\
+																	\
+			t = FUNC ();										\
+																	\
+			if (k==0)												\
+				_mm_store_ ## SUBFIX(( PTR_TYPE *)c,t);				\
+			else													\
+				_mm_storeu_ ## SUBFIX((PTR_TYPE *)c,t);				\
+			print("\tc=OP()", c, N);								\
+		}															\
+	}
+
+#define SHUFFLE_ONE(FUNC,z,y,x,w)				\
+	t = FUNC (r0,_MM_SHUFFLE(z,y,x,w));			\
+	if (k==0)			\
+		_mm_store_si128(( __m128i *)c,t);			\
+	else						\
+		_mm_storeu_si128((__m128i *)c,t);	\
+	print("\ta        ", a, N);			\
+	std::cout<<"\tc=OP(a,_MM_SHUFFLE("		\
+		<<#z<<","<<#y<<","<<#x<<","<<#w<<")";	\
+	print("", c, N);				
+
+
+#define SHUFFLEEPI32_TEST_DEFINE(FUNC,TYPE,SUBFIX,PTR_TYPE,VAL_TYPE)					\
+	void test_ ## FUNC ## _ ##TYPE() {										\
+		std:: cout << "function : "<< __FUNCTION__ << std::endl;			\
+		const int   N = 16 / sizeof(TYPE);									\
+		char CV_DECL_ALIGNED(16)  buf2[32];									\
+		int count = 0;														\
+		for (size_t i = 0; i < N; i++)										\
+			for (size_t k = 0; k < N; k++)								\
+			{															\
+				std:: cout << "iter."<< count++<<" : " << std::endl;	\
+				TYPE* a = (TYPE*)(buf0)+i;								\
+				TYPE* c = (TYPE*)(buf2)+k;								\
+				std::cout << "\t(a,c) offset : ("						\
+					<< i << "," 							\
+					<< k << ")" << std::endl;							\
+				VAL_TYPE r0,t;										\
+																		\
+				if (i==0)												\
+					r0 =  _mm_load_ ## SUBFIX((const PTR_TYPE *)a);		\
+				else													\
+					r0 =  _mm_loadu_ ## SUBFIX((const PTR_TYPE *)a);	\
+																		\
+				SHUFFLE_ONE(FUNC,0,0,0,0);   \
+				SHUFFLE_ONE(FUNC,1,0,0,1);   \
+				SHUFFLE_ONE(FUNC,0,0,0,2);   \
+				SHUFFLE_ONE(FUNC,0,0,0,3);   \
+				SHUFFLE_ONE(FUNC,0,0,1,0);   \
+				SHUFFLE_ONE(FUNC,0,0,1,1);   \
+				SHUFFLE_ONE(FUNC,0,0,1,2);   \
+				SHUFFLE_ONE(FUNC,0,0,1,3);   \
+				SHUFFLE_ONE(FUNC,0,0,2,0);   \
+				SHUFFLE_ONE(FUNC,0,0,2,1);   \
+				SHUFFLE_ONE(FUNC,0,0,2,2);   \
+				SHUFFLE_ONE(FUNC,0,0,2,3);   \
+				SHUFFLE_ONE(FUNC,0,0,3,0);   \
+				SHUFFLE_ONE(FUNC,0,0,3,1);   \
+				SHUFFLE_ONE(FUNC,0,0,3,2);   \
+				SHUFFLE_ONE(FUNC,0,0,3,3);   \
+				SHUFFLE_ONE(FUNC,0,1,0,0);   \
+				SHUFFLE_ONE(FUNC,0,1,0,1);   \
+				SHUFFLE_ONE(FUNC,0,1,0,2);   \
+				SHUFFLE_ONE(FUNC,0,1,0,3);   \
+				SHUFFLE_ONE(FUNC,0,1,1,0);   \
+				SHUFFLE_ONE(FUNC,0,1,1,1);   \
+				SHUFFLE_ONE(FUNC,0,1,1,2);   \
+				SHUFFLE_ONE(FUNC,0,1,1,3);   \
+				SHUFFLE_ONE(FUNC,0,1,2,0);   \
+				SHUFFLE_ONE(FUNC,0,1,2,1);   \
+				SHUFFLE_ONE(FUNC,0,1,2,2);   \
+				SHUFFLE_ONE(FUNC,0,1,2,3);   \
+				SHUFFLE_ONE(FUNC,0,1,3,0);   \
+				SHUFFLE_ONE(FUNC,0,1,3,1);   \
+				SHUFFLE_ONE(FUNC,0,1,3,2);   \
+				SHUFFLE_ONE(FUNC,0,1,3,3);   \
+				SHUFFLE_ONE(FUNC,0,2,0,0);   \
+				SHUFFLE_ONE(FUNC,0,2,0,1);   \
+				SHUFFLE_ONE(FUNC,0,2,0,2);   \
+				SHUFFLE_ONE(FUNC,0,2,0,3);   \
+				SHUFFLE_ONE(FUNC,0,2,1,0);   \
+				SHUFFLE_ONE(FUNC,0,2,1,1);   \
+				SHUFFLE_ONE(FUNC,0,2,1,2);   \
+				SHUFFLE_ONE(FUNC,0,2,1,3);   \
+				SHUFFLE_ONE(FUNC,0,2,2,0);   \
+				SHUFFLE_ONE(FUNC,0,2,2,1);   \
+				SHUFFLE_ONE(FUNC,0,2,2,2);   \
+				SHUFFLE_ONE(FUNC,0,2,2,3);   \
+				SHUFFLE_ONE(FUNC,0,2,3,0);   \
+				SHUFFLE_ONE(FUNC,0,2,3,1);   \
+				SHUFFLE_ONE(FUNC,0,2,3,2);   \
+				SHUFFLE_ONE(FUNC,0,2,3,3);   \
+				SHUFFLE_ONE(FUNC,0,3,0,0);   \
+				SHUFFLE_ONE(FUNC,0,3,0,1);   \
+				SHUFFLE_ONE(FUNC,0,3,0,2);   \
+				SHUFFLE_ONE(FUNC,0,3,0,3);   \
+				SHUFFLE_ONE(FUNC,0,3,1,0);   \
+				SHUFFLE_ONE(FUNC,0,3,1,1);   \
+				SHUFFLE_ONE(FUNC,0,3,1,2);   \
+				SHUFFLE_ONE(FUNC,0,3,1,3);   \
+				SHUFFLE_ONE(FUNC,0,3,2,0);   \
+				SHUFFLE_ONE(FUNC,0,3,2,1);   \
+				SHUFFLE_ONE(FUNC,0,3,2,2);   \
+				SHUFFLE_ONE(FUNC,0,3,2,3);   \
+				SHUFFLE_ONE(FUNC,0,3,3,0);   \
+				SHUFFLE_ONE(FUNC,0,3,3,1);   \
+				SHUFFLE_ONE(FUNC,0,3,3,2);   \
+				SHUFFLE_ONE(FUNC,0,3,3,3);   \
+				SHUFFLE_ONE(FUNC,1,0,0,0);   \
+				SHUFFLE_ONE(FUNC,1,0,0,1);   \
+				SHUFFLE_ONE(FUNC,1,0,0,2);   \
+				SHUFFLE_ONE(FUNC,1,0,0,3);   \
+				SHUFFLE_ONE(FUNC,1,0,1,0);   \
+				SHUFFLE_ONE(FUNC,1,0,1,1);   \
+				SHUFFLE_ONE(FUNC,1,0,1,2);   \
+				SHUFFLE_ONE(FUNC,1,0,1,3);   \
+				SHUFFLE_ONE(FUNC,1,0,2,0);   \
+				SHUFFLE_ONE(FUNC,1,0,2,1);   \
+				SHUFFLE_ONE(FUNC,1,0,2,2);   \
+				SHUFFLE_ONE(FUNC,1,0,2,3);   \
+				SHUFFLE_ONE(FUNC,1,0,3,0);   \
+				SHUFFLE_ONE(FUNC,1,0,3,1);   \
+				SHUFFLE_ONE(FUNC,1,0,3,2);   \
+				SHUFFLE_ONE(FUNC,1,0,3,3);   \
+				SHUFFLE_ONE(FUNC,1,1,0,0);   \
+				SHUFFLE_ONE(FUNC,1,1,0,1);   \
+				SHUFFLE_ONE(FUNC,1,1,0,2);   \
+				SHUFFLE_ONE(FUNC,1,1,0,3);   \
+				SHUFFLE_ONE(FUNC,1,1,1,0);   \
+				SHUFFLE_ONE(FUNC,1,1,1,1);   \
+				SHUFFLE_ONE(FUNC,1,1,1,2);   \
+				SHUFFLE_ONE(FUNC,1,1,1,3);   \
+				SHUFFLE_ONE(FUNC,1,1,2,0);   \
+				SHUFFLE_ONE(FUNC,1,1,2,1);   \
+				SHUFFLE_ONE(FUNC,1,1,2,2);   \
+				SHUFFLE_ONE(FUNC,1,1,2,3);   \
+				SHUFFLE_ONE(FUNC,1,1,3,0);   \
+				SHUFFLE_ONE(FUNC,1,1,3,1);   \
+				SHUFFLE_ONE(FUNC,1,1,3,2);   \
+				SHUFFLE_ONE(FUNC,1,1,3,3);   \
+				SHUFFLE_ONE(FUNC,1,2,0,0);   \
+				SHUFFLE_ONE(FUNC,1,2,0,1);   \
+				SHUFFLE_ONE(FUNC,1,2,0,2);   \
+				SHUFFLE_ONE(FUNC,1,2,0,3);   \
+				SHUFFLE_ONE(FUNC,1,2,1,0);   \
+				SHUFFLE_ONE(FUNC,1,2,1,1);   \
+				SHUFFLE_ONE(FUNC,1,2,1,2);   \
+				SHUFFLE_ONE(FUNC,1,2,1,3);   \
+				SHUFFLE_ONE(FUNC,1,2,2,0);   \
+				SHUFFLE_ONE(FUNC,1,2,2,1);   \
+				SHUFFLE_ONE(FUNC,1,2,2,2);   \
+				SHUFFLE_ONE(FUNC,1,2,2,3);   \
+				SHUFFLE_ONE(FUNC,1,2,3,0);   \
+				SHUFFLE_ONE(FUNC,1,2,3,1);   \
+				SHUFFLE_ONE(FUNC,1,2,3,2);   \
+				SHUFFLE_ONE(FUNC,1,2,3,3);   \
+				SHUFFLE_ONE(FUNC,1,3,0,0);   \
+				SHUFFLE_ONE(FUNC,1,3,0,1);   \
+				SHUFFLE_ONE(FUNC,1,3,0,2);   \
+				SHUFFLE_ONE(FUNC,1,3,0,3);   \
+				SHUFFLE_ONE(FUNC,1,3,1,0);   \
+				SHUFFLE_ONE(FUNC,1,3,1,1);   \
+				SHUFFLE_ONE(FUNC,1,3,1,2);   \
+				SHUFFLE_ONE(FUNC,1,3,1,3);   \
+				SHUFFLE_ONE(FUNC,1,3,2,0);   \
+				SHUFFLE_ONE(FUNC,1,3,2,1);   \
+				SHUFFLE_ONE(FUNC,1,3,2,2);   \
+				SHUFFLE_ONE(FUNC,1,3,2,3);   \
+				SHUFFLE_ONE(FUNC,1,3,3,0);   \
+				SHUFFLE_ONE(FUNC,1,3,3,1);   \
+				SHUFFLE_ONE(FUNC,1,3,3,2);   \
+				SHUFFLE_ONE(FUNC,1,3,3,3);   \
+				SHUFFLE_ONE(FUNC,2,0,0,0);   \
+				SHUFFLE_ONE(FUNC,2,0,0,1);   \
+				SHUFFLE_ONE(FUNC,2,0,0,2);   \
+				SHUFFLE_ONE(FUNC,2,0,0,3);   \
+				SHUFFLE_ONE(FUNC,2,0,1,0);   \
+				SHUFFLE_ONE(FUNC,2,0,1,1);   \
+				SHUFFLE_ONE(FUNC,2,0,1,2);   \
+				SHUFFLE_ONE(FUNC,2,0,1,3);   \
+				SHUFFLE_ONE(FUNC,2,0,2,0);   \
+				SHUFFLE_ONE(FUNC,2,0,2,1);   \
+				SHUFFLE_ONE(FUNC,2,0,2,2);   \
+				SHUFFLE_ONE(FUNC,2,0,2,3);   \
+				SHUFFLE_ONE(FUNC,2,0,3,0);   \
+				SHUFFLE_ONE(FUNC,2,0,3,1);   \
+				SHUFFLE_ONE(FUNC,2,0,3,2);   \
+				SHUFFLE_ONE(FUNC,2,0,3,3);   \
+				SHUFFLE_ONE(FUNC,2,1,0,0);   \
+				SHUFFLE_ONE(FUNC,2,1,0,1);   \
+				SHUFFLE_ONE(FUNC,2,1,0,2);   \
+				SHUFFLE_ONE(FUNC,2,1,0,3);   \
+				SHUFFLE_ONE(FUNC,2,1,1,0);   \
+				SHUFFLE_ONE(FUNC,2,1,1,1);   \
+				SHUFFLE_ONE(FUNC,2,1,1,2);   \
+				SHUFFLE_ONE(FUNC,2,1,1,3);   \
+				SHUFFLE_ONE(FUNC,2,1,2,0);   \
+				SHUFFLE_ONE(FUNC,2,1,2,1);   \
+				SHUFFLE_ONE(FUNC,2,1,2,2);   \
+				SHUFFLE_ONE(FUNC,2,1,2,3);   \
+				SHUFFLE_ONE(FUNC,2,1,3,0);   \
+				SHUFFLE_ONE(FUNC,2,1,3,1);   \
+				SHUFFLE_ONE(FUNC,2,1,3,2);   \
+				SHUFFLE_ONE(FUNC,2,1,3,3);   \
+				SHUFFLE_ONE(FUNC,2,2,0,0);   \
+				SHUFFLE_ONE(FUNC,2,2,0,1);   \
+				SHUFFLE_ONE(FUNC,2,2,0,2);   \
+				SHUFFLE_ONE(FUNC,2,2,0,3);   \
+				SHUFFLE_ONE(FUNC,2,2,1,0);   \
+				SHUFFLE_ONE(FUNC,2,2,1,1);   \
+				SHUFFLE_ONE(FUNC,2,2,1,2);   \
+				SHUFFLE_ONE(FUNC,2,2,1,3);   \
+				SHUFFLE_ONE(FUNC,2,2,2,0);   \
+				SHUFFLE_ONE(FUNC,2,2,2,1);   \
+				SHUFFLE_ONE(FUNC,2,2,2,2);   \
+				SHUFFLE_ONE(FUNC,2,2,2,3);   \
+				SHUFFLE_ONE(FUNC,2,2,3,0);   \
+				SHUFFLE_ONE(FUNC,2,2,3,1);   \
+				SHUFFLE_ONE(FUNC,2,2,3,2);   \
+				SHUFFLE_ONE(FUNC,2,2,3,3);   \
+				SHUFFLE_ONE(FUNC,2,3,0,0);   \
+				SHUFFLE_ONE(FUNC,2,3,0,1);   \
+				SHUFFLE_ONE(FUNC,2,3,0,2);   \
+				SHUFFLE_ONE(FUNC,2,3,0,3);   \
+				SHUFFLE_ONE(FUNC,2,3,1,0);   \
+				SHUFFLE_ONE(FUNC,2,3,1,1);   \
+				SHUFFLE_ONE(FUNC,2,3,1,2);   \
+				SHUFFLE_ONE(FUNC,2,3,1,3);   \
+				SHUFFLE_ONE(FUNC,2,3,2,0);   \
+				SHUFFLE_ONE(FUNC,2,3,2,1);   \
+				SHUFFLE_ONE(FUNC,2,3,2,2);   \
+				SHUFFLE_ONE(FUNC,2,3,2,3);   \
+				SHUFFLE_ONE(FUNC,2,3,3,0);   \
+				SHUFFLE_ONE(FUNC,2,3,3,1);   \
+				SHUFFLE_ONE(FUNC,2,3,3,2);   \
+				SHUFFLE_ONE(FUNC,2,3,3,3);   \
+				SHUFFLE_ONE(FUNC,3,0,0,0);   \
+				SHUFFLE_ONE(FUNC,3,0,0,1);   \
+				SHUFFLE_ONE(FUNC,3,0,0,2);   \
+				SHUFFLE_ONE(FUNC,3,0,0,3);   \
+				SHUFFLE_ONE(FUNC,3,0,1,0);   \
+				SHUFFLE_ONE(FUNC,3,0,1,1);   \
+				SHUFFLE_ONE(FUNC,3,0,1,2);   \
+				SHUFFLE_ONE(FUNC,3,0,1,3);   \
+				SHUFFLE_ONE(FUNC,3,0,2,0);   \
+				SHUFFLE_ONE(FUNC,3,0,2,1);   \
+				SHUFFLE_ONE(FUNC,3,0,2,2);   \
+				SHUFFLE_ONE(FUNC,3,0,2,3);   \
+				SHUFFLE_ONE(FUNC,3,0,3,0);   \
+				SHUFFLE_ONE(FUNC,3,0,3,1);   \
+				SHUFFLE_ONE(FUNC,3,0,3,2);   \
+				SHUFFLE_ONE(FUNC,3,0,3,3);   \
+				SHUFFLE_ONE(FUNC,3,1,0,0);   \
+				SHUFFLE_ONE(FUNC,3,1,0,1);   \
+				SHUFFLE_ONE(FUNC,3,1,0,2);   \
+				SHUFFLE_ONE(FUNC,3,1,0,3);   \
+				SHUFFLE_ONE(FUNC,3,1,1,0);   \
+				SHUFFLE_ONE(FUNC,3,1,1,1);   \
+				SHUFFLE_ONE(FUNC,3,1,1,2);   \
+				SHUFFLE_ONE(FUNC,3,1,1,3);   \
+				SHUFFLE_ONE(FUNC,3,1,2,0);   \
+				SHUFFLE_ONE(FUNC,3,1,2,1);   \
+				SHUFFLE_ONE(FUNC,3,1,2,2);   \
+				SHUFFLE_ONE(FUNC,3,1,2,3);   \
+				SHUFFLE_ONE(FUNC,3,1,3,0);   \
+				SHUFFLE_ONE(FUNC,3,1,3,1);   \
+				SHUFFLE_ONE(FUNC,3,1,3,2);   \
+				SHUFFLE_ONE(FUNC,3,1,3,3);   \
+				SHUFFLE_ONE(FUNC,3,2,0,0);   \
+				SHUFFLE_ONE(FUNC,3,2,0,1);   \
+				SHUFFLE_ONE(FUNC,3,2,0,2);   \
+				SHUFFLE_ONE(FUNC,3,2,0,3);   \
+				SHUFFLE_ONE(FUNC,3,2,1,0);   \
+				SHUFFLE_ONE(FUNC,3,2,1,1);   \
+				SHUFFLE_ONE(FUNC,3,2,1,2);   \
+				SHUFFLE_ONE(FUNC,3,2,1,3);   \
+				SHUFFLE_ONE(FUNC,3,2,2,0);   \
+				SHUFFLE_ONE(FUNC,3,2,2,1);   \
+				SHUFFLE_ONE(FUNC,3,2,2,2);   \
+				SHUFFLE_ONE(FUNC,3,2,2,3);   \
+				SHUFFLE_ONE(FUNC,3,2,3,0);   \
+				SHUFFLE_ONE(FUNC,3,2,3,1);   \
+				SHUFFLE_ONE(FUNC,3,2,3,2);   \
+				SHUFFLE_ONE(FUNC,3,2,3,3);   \
+				SHUFFLE_ONE(FUNC,3,3,0,0);   \
+				SHUFFLE_ONE(FUNC,3,3,0,1);   \
+				SHUFFLE_ONE(FUNC,3,3,0,2);   \
+				SHUFFLE_ONE(FUNC,3,3,0,3);   \
+				SHUFFLE_ONE(FUNC,3,3,1,0);   \
+				SHUFFLE_ONE(FUNC,3,3,1,1);   \
+				SHUFFLE_ONE(FUNC,3,3,1,2);   \
+				SHUFFLE_ONE(FUNC,3,3,1,3);   \
+				SHUFFLE_ONE(FUNC,3,3,2,0);   \
+				SHUFFLE_ONE(FUNC,3,3,2,1);   \
+				SHUFFLE_ONE(FUNC,3,3,2,2);   \
+				SHUFFLE_ONE(FUNC,3,3,2,3);   \
+				SHUFFLE_ONE(FUNC,3,3,3,0);   \
+				SHUFFLE_ONE(FUNC,3,3,3,1);   \
+				SHUFFLE_ONE(FUNC,3,3,3,2);   \
+				SHUFFLE_ONE(FUNC,3,3,3,3);   \
+			}				\
+	}
+
+
+
+#define SHIFFT_IMM_TEST_DEFINE(FUNC,TYPE,SUBFIX,PTR_TYPE,VAL_TYPE)					\
+	void test_ ## FUNC ## _ ##TYPE() {										\
+		std:: cout << "function : "<< __FUNCTION__ << std::endl;			\
+		const int   N = 16 / sizeof(TYPE);									\
+		char CV_DECL_ALIGNED(16)  buf2[32];									\
+		int count = 0;														\
+		for (size_t i = 0; i < N; i++)										\
+			for (size_t k = 0; k < N; k++)								\
+			{															\
+				std:: cout << "iter."<< count++<<" : " << std::endl;	\
+				TYPE* a = (TYPE*)(buf0)+i;								\
+				TYPE* c = (TYPE*)(buf2)+k;								\
+				std::cout << "\t(a,b,c) offset : ("						\
+					<< i << "," 							\
+					<< k << ")" << std::endl;							\
+				VAL_TYPE r0,t;										\
+																		\
+				if (i==0)												\
+					r0 =  _mm_load_ ## SUBFIX((const PTR_TYPE *)a);		\
+				else													\
+					r0 =  _mm_loadu_ ## SUBFIX((const PTR_TYPE *)a);	\
+																		\
+				for(int imm=0;imm<16;imm++)														\
+				{														\
+					t = FUNC (r0,imm);										\
+																		\
+					if (k==0)												\
+						_mm_store_ ## SUBFIX(( PTR_TYPE *)c,t);				\
+					else													\
+						_mm_storeu_ ## SUBFIX((PTR_TYPE *)c,t);				\
+					print("\ta        ", a, N);								\
+					print("\tc=OP(a,imm)", c, N);								\
+				}														\
+			}															\
+	}
+
+
+#define SHUFFLE_TWO(FUNC,z,y,x,w)				\
+	t = FUNC (r0,r1,_MM_SHUFFLE(z,y,x,w));			\
+	if (k==0)			\
+		_mm_store_ps(( float *)c,t);			\
+	else						\
+		_mm_storeu_ps((float *)c,t);	\
+	print("\ta        ", a, N);			\
+	print("\tb        ", b, N);			\
+	std::cout<<"\tc=OP(a,b,_MM_SHUFFLE("		\
+		<<#z<<","<<#y<<","<<#x<<","<<#w<<")";	\
+	print("", c, N);				
+
+
+#define SHUFFLEPS_TEST_DEFINE(FUNC,TYPE,SUBFIX,PTR_TYPE,VAL_TYPE)					\
+	void test_ ## FUNC ## _ ##TYPE() {										\
+		std:: cout << "function : "<< __FUNCTION__ << std::endl;			\
+		const int   N = 16 / sizeof(TYPE);									\
+		char CV_DECL_ALIGNED(16)  buf2[32];									\
+		int count = 0;														\
+		for (size_t i = 0; i < N; i++)										\
+			for (size_t j = 0; j < N; j++)									\
+				for (size_t k = 0; k < N; k++)								\
+				{															\
+					std:: cout << "iter."<< count++<<" : " << std::endl;	\
+					TYPE* a = (TYPE*)(buf0)+i;								\
+					TYPE* b = (TYPE*)(buf1)+j;								\
+					TYPE* c = (TYPE*)(buf2)+k;								\
+					std::cout << "\t(a,b,c) offset : ("						\
+						<< i << "," << j << ","								\
+						<< k << ")" << std::endl;							\
+					VAL_TYPE r0,r1,t;										\
+																			\
+					if (i==0)												\
+						r0 =  _mm_load_ ## SUBFIX((const PTR_TYPE *)a);		\
+					else													\
+						r0 =  _mm_loadu_ ## SUBFIX((const PTR_TYPE *)a);	\
+																			\
+					if (j==0)												\
+						r1 =  _mm_load_ ## SUBFIX((const PTR_TYPE *)b);		\
+					else													\
+						r1 =  _mm_loadu_ ## SUBFIX((const PTR_TYPE *)b);	\
+																			\
+	  			SHUFFLE_TWO(FUNC,0,0,0,0);   \
+				SHUFFLE_TWO(FUNC,1,0,0,1);   \
+				SHUFFLE_TWO(FUNC,0,0,0,2);   \
+				SHUFFLE_TWO(FUNC,0,0,0,3);   \
+				SHUFFLE_TWO(FUNC,0,0,1,0);   \
+				SHUFFLE_TWO(FUNC,0,0,1,1);   \
+				SHUFFLE_TWO(FUNC,0,0,1,2);   \
+				SHUFFLE_TWO(FUNC,0,0,1,3);   \
+				SHUFFLE_TWO(FUNC,0,0,2,0);   \
+				SHUFFLE_TWO(FUNC,0,0,2,1);   \
+				SHUFFLE_TWO(FUNC,0,0,2,2);   \
+				SHUFFLE_TWO(FUNC,0,0,2,3);   \
+				SHUFFLE_TWO(FUNC,0,0,3,0);   \
+				SHUFFLE_TWO(FUNC,0,0,3,1);   \
+				SHUFFLE_TWO(FUNC,0,0,3,2);   \
+				SHUFFLE_TWO(FUNC,0,0,3,3);   \
+				SHUFFLE_TWO(FUNC,0,1,0,0);   \
+				SHUFFLE_TWO(FUNC,0,1,0,1);   \
+				SHUFFLE_TWO(FUNC,0,1,0,2);   \
+				SHUFFLE_TWO(FUNC,0,1,0,3);   \
+				SHUFFLE_TWO(FUNC,0,1,1,0);   \
+				SHUFFLE_TWO(FUNC,0,1,1,1);   \
+				SHUFFLE_TWO(FUNC,0,1,1,2);   \
+				SHUFFLE_TWO(FUNC,0,1,1,3);   \
+				SHUFFLE_TWO(FUNC,0,1,2,0);   \
+				SHUFFLE_TWO(FUNC,0,1,2,1);   \
+				SHUFFLE_TWO(FUNC,0,1,2,2);   \
+				SHUFFLE_TWO(FUNC,0,1,2,3);   \
+				SHUFFLE_TWO(FUNC,0,1,3,0);   \
+				SHUFFLE_TWO(FUNC,0,1,3,1);   \
+				SHUFFLE_TWO(FUNC,0,1,3,2);   \
+				SHUFFLE_TWO(FUNC,0,1,3,3);   \
+				SHUFFLE_TWO(FUNC,0,2,0,0);   \
+				SHUFFLE_TWO(FUNC,0,2,0,1);   \
+				SHUFFLE_TWO(FUNC,0,2,0,2);   \
+				SHUFFLE_TWO(FUNC,0,2,0,3);   \
+				SHUFFLE_TWO(FUNC,0,2,1,0);   \
+				SHUFFLE_TWO(FUNC,0,2,1,1);   \
+				SHUFFLE_TWO(FUNC,0,2,1,2);   \
+				SHUFFLE_TWO(FUNC,0,2,1,3);   \
+				SHUFFLE_TWO(FUNC,0,2,2,0);   \
+				SHUFFLE_TWO(FUNC,0,2,2,1);   \
+				SHUFFLE_TWO(FUNC,0,2,2,2);   \
+				SHUFFLE_TWO(FUNC,0,2,2,3);   \
+				SHUFFLE_TWO(FUNC,0,2,3,0);   \
+				SHUFFLE_TWO(FUNC,0,2,3,1);   \
+				SHUFFLE_TWO(FUNC,0,2,3,2);   \
+				SHUFFLE_TWO(FUNC,0,2,3,3);   \
+				SHUFFLE_TWO(FUNC,0,3,0,0);   \
+				SHUFFLE_TWO(FUNC,0,3,0,1);   \
+				SHUFFLE_TWO(FUNC,0,3,0,2);   \
+				SHUFFLE_TWO(FUNC,0,3,0,3);   \
+				SHUFFLE_TWO(FUNC,0,3,1,0);   \
+				SHUFFLE_TWO(FUNC,0,3,1,1);   \
+				SHUFFLE_TWO(FUNC,0,3,1,2);   \
+				SHUFFLE_TWO(FUNC,0,3,1,3);   \
+				SHUFFLE_TWO(FUNC,0,3,2,0);   \
+				SHUFFLE_TWO(FUNC,0,3,2,1);   \
+				SHUFFLE_TWO(FUNC,0,3,2,2);   \
+				SHUFFLE_TWO(FUNC,0,3,2,3);   \
+				SHUFFLE_TWO(FUNC,0,3,3,0);   \
+				SHUFFLE_TWO(FUNC,0,3,3,1);   \
+				SHUFFLE_TWO(FUNC,0,3,3,2);   \
+				SHUFFLE_TWO(FUNC,0,3,3,3);   \
+				SHUFFLE_TWO(FUNC,1,0,0,0);   \
+				SHUFFLE_TWO(FUNC,1,0,0,1);   \
+				SHUFFLE_TWO(FUNC,1,0,0,2);   \
+				SHUFFLE_TWO(FUNC,1,0,0,3);   \
+				SHUFFLE_TWO(FUNC,1,0,1,0);   \
+				SHUFFLE_TWO(FUNC,1,0,1,1);   \
+				SHUFFLE_TWO(FUNC,1,0,1,2);   \
+				SHUFFLE_TWO(FUNC,1,0,1,3);   \
+				SHUFFLE_TWO(FUNC,1,0,2,0);   \
+				SHUFFLE_TWO(FUNC,1,0,2,1);   \
+				SHUFFLE_TWO(FUNC,1,0,2,2);   \
+				SHUFFLE_TWO(FUNC,1,0,2,3);   \
+				SHUFFLE_TWO(FUNC,1,0,3,0);   \
+				SHUFFLE_TWO(FUNC,1,0,3,1);   \
+				SHUFFLE_TWO(FUNC,1,0,3,2);   \
+				SHUFFLE_TWO(FUNC,1,0,3,3);   \
+				SHUFFLE_TWO(FUNC,1,1,0,0);   \
+				SHUFFLE_TWO(FUNC,1,1,0,1);   \
+				SHUFFLE_TWO(FUNC,1,1,0,2);   \
+				SHUFFLE_TWO(FUNC,1,1,0,3);   \
+				SHUFFLE_TWO(FUNC,1,1,1,0);   \
+				SHUFFLE_TWO(FUNC,1,1,1,1);   \
+				SHUFFLE_TWO(FUNC,1,1,1,2);   \
+				SHUFFLE_TWO(FUNC,1,1,1,3);   \
+				SHUFFLE_TWO(FUNC,1,1,2,0);   \
+				SHUFFLE_TWO(FUNC,1,1,2,1);   \
+				SHUFFLE_TWO(FUNC,1,1,2,2);   \
+				SHUFFLE_TWO(FUNC,1,1,2,3);   \
+				SHUFFLE_TWO(FUNC,1,1,3,0);   \
+				SHUFFLE_TWO(FUNC,1,1,3,1);   \
+				SHUFFLE_TWO(FUNC,1,1,3,2);   \
+				SHUFFLE_TWO(FUNC,1,1,3,3);   \
+				SHUFFLE_TWO(FUNC,1,2,0,0);   \
+				SHUFFLE_TWO(FUNC,1,2,0,1);   \
+				SHUFFLE_TWO(FUNC,1,2,0,2);   \
+				SHUFFLE_TWO(FUNC,1,2,0,3);   \
+				SHUFFLE_TWO(FUNC,1,2,1,0);   \
+				SHUFFLE_TWO(FUNC,1,2,1,1);   \
+				SHUFFLE_TWO(FUNC,1,2,1,2);   \
+				SHUFFLE_TWO(FUNC,1,2,1,3);   \
+				SHUFFLE_TWO(FUNC,1,2,2,0);   \
+				SHUFFLE_TWO(FUNC,1,2,2,1);   \
+				SHUFFLE_TWO(FUNC,1,2,2,2);   \
+				SHUFFLE_TWO(FUNC,1,2,2,3);   \
+				SHUFFLE_TWO(FUNC,1,2,3,0);   \
+				SHUFFLE_TWO(FUNC,1,2,3,1);   \
+				SHUFFLE_TWO(FUNC,1,2,3,2);   \
+				SHUFFLE_TWO(FUNC,1,2,3,3);   \
+				SHUFFLE_TWO(FUNC,1,3,0,0);   \
+				SHUFFLE_TWO(FUNC,1,3,0,1);   \
+				SHUFFLE_TWO(FUNC,1,3,0,2);   \
+				SHUFFLE_TWO(FUNC,1,3,0,3);   \
+				SHUFFLE_TWO(FUNC,1,3,1,0);   \
+				SHUFFLE_TWO(FUNC,1,3,1,1);   \
+				SHUFFLE_TWO(FUNC,1,3,1,2);   \
+				SHUFFLE_TWO(FUNC,1,3,1,3);   \
+				SHUFFLE_TWO(FUNC,1,3,2,0);   \
+				SHUFFLE_TWO(FUNC,1,3,2,1);   \
+				SHUFFLE_TWO(FUNC,1,3,2,2);   \
+				SHUFFLE_TWO(FUNC,1,3,2,3);   \
+				SHUFFLE_TWO(FUNC,1,3,3,0);   \
+				SHUFFLE_TWO(FUNC,1,3,3,1);   \
+				SHUFFLE_TWO(FUNC,1,3,3,2);   \
+				SHUFFLE_TWO(FUNC,1,3,3,3);   \
+				SHUFFLE_TWO(FUNC,2,0,0,0);   \
+				SHUFFLE_TWO(FUNC,2,0,0,1);   \
+				SHUFFLE_TWO(FUNC,2,0,0,2);   \
+				SHUFFLE_TWO(FUNC,2,0,0,3);   \
+				SHUFFLE_TWO(FUNC,2,0,1,0);   \
+				SHUFFLE_TWO(FUNC,2,0,1,1);   \
+				SHUFFLE_TWO(FUNC,2,0,1,2);   \
+				SHUFFLE_TWO(FUNC,2,0,1,3);   \
+				SHUFFLE_TWO(FUNC,2,0,2,0);   \
+				SHUFFLE_TWO(FUNC,2,0,2,1);   \
+				SHUFFLE_TWO(FUNC,2,0,2,2);   \
+				SHUFFLE_TWO(FUNC,2,0,2,3);   \
+				SHUFFLE_TWO(FUNC,2,0,3,0);   \
+				SHUFFLE_TWO(FUNC,2,0,3,1);   \
+				SHUFFLE_TWO(FUNC,2,0,3,2);   \
+				SHUFFLE_TWO(FUNC,2,0,3,3);   \
+				SHUFFLE_TWO(FUNC,2,1,0,0);   \
+				SHUFFLE_TWO(FUNC,2,1,0,1);   \
+				SHUFFLE_TWO(FUNC,2,1,0,2);   \
+				SHUFFLE_TWO(FUNC,2,1,0,3);   \
+				SHUFFLE_TWO(FUNC,2,1,1,0);   \
+				SHUFFLE_TWO(FUNC,2,1,1,1);   \
+				SHUFFLE_TWO(FUNC,2,1,1,2);   \
+				SHUFFLE_TWO(FUNC,2,1,1,3);   \
+				SHUFFLE_TWO(FUNC,2,1,2,0);   \
+				SHUFFLE_TWO(FUNC,2,1,2,1);   \
+				SHUFFLE_TWO(FUNC,2,1,2,2);   \
+				SHUFFLE_TWO(FUNC,2,1,2,3);   \
+				SHUFFLE_TWO(FUNC,2,1,3,0);   \
+				SHUFFLE_TWO(FUNC,2,1,3,1);   \
+				SHUFFLE_TWO(FUNC,2,1,3,2);   \
+				SHUFFLE_TWO(FUNC,2,1,3,3);   \
+				SHUFFLE_TWO(FUNC,2,2,0,0);   \
+				SHUFFLE_TWO(FUNC,2,2,0,1);   \
+				SHUFFLE_TWO(FUNC,2,2,0,2);   \
+				SHUFFLE_TWO(FUNC,2,2,0,3);   \
+				SHUFFLE_TWO(FUNC,2,2,1,0);   \
+				SHUFFLE_TWO(FUNC,2,2,1,1);   \
+				SHUFFLE_TWO(FUNC,2,2,1,2);   \
+				SHUFFLE_TWO(FUNC,2,2,1,3);   \
+				SHUFFLE_TWO(FUNC,2,2,2,0);   \
+				SHUFFLE_TWO(FUNC,2,2,2,1);   \
+				SHUFFLE_TWO(FUNC,2,2,2,2);   \
+				SHUFFLE_TWO(FUNC,2,2,2,3);   \
+				SHUFFLE_TWO(FUNC,2,2,3,0);   \
+				SHUFFLE_TWO(FUNC,2,2,3,1);   \
+				SHUFFLE_TWO(FUNC,2,2,3,2);   \
+				SHUFFLE_TWO(FUNC,2,2,3,3);   \
+				SHUFFLE_TWO(FUNC,2,3,0,0);   \
+				SHUFFLE_TWO(FUNC,2,3,0,1);   \
+				SHUFFLE_TWO(FUNC,2,3,0,2);   \
+				SHUFFLE_TWO(FUNC,2,3,0,3);   \
+				SHUFFLE_TWO(FUNC,2,3,1,0);   \
+				SHUFFLE_TWO(FUNC,2,3,1,1);   \
+				SHUFFLE_TWO(FUNC,2,3,1,2);   \
+				SHUFFLE_TWO(FUNC,2,3,1,3);   \
+				SHUFFLE_TWO(FUNC,2,3,2,0);   \
+				SHUFFLE_TWO(FUNC,2,3,2,1);   \
+				SHUFFLE_TWO(FUNC,2,3,2,2);   \
+				SHUFFLE_TWO(FUNC,2,3,2,3);   \
+				SHUFFLE_TWO(FUNC,2,3,3,0);   \
+				SHUFFLE_TWO(FUNC,2,3,3,1);   \
+				SHUFFLE_TWO(FUNC,2,3,3,2);   \
+				SHUFFLE_TWO(FUNC,2,3,3,3);   \
+				SHUFFLE_TWO(FUNC,3,0,0,0);   \
+				SHUFFLE_TWO(FUNC,3,0,0,1);   \
+				SHUFFLE_TWO(FUNC,3,0,0,2);   \
+				SHUFFLE_TWO(FUNC,3,0,0,3);   \
+				SHUFFLE_TWO(FUNC,3,0,1,0);   \
+				SHUFFLE_TWO(FUNC,3,0,1,1);   \
+				SHUFFLE_TWO(FUNC,3,0,1,2);   \
+				SHUFFLE_TWO(FUNC,3,0,1,3);   \
+				SHUFFLE_TWO(FUNC,3,0,2,0);   \
+				SHUFFLE_TWO(FUNC,3,0,2,1);   \
+				SHUFFLE_TWO(FUNC,3,0,2,2);   \
+				SHUFFLE_TWO(FUNC,3,0,2,3);   \
+				SHUFFLE_TWO(FUNC,3,0,3,0);   \
+				SHUFFLE_TWO(FUNC,3,0,3,1);   \
+				SHUFFLE_TWO(FUNC,3,0,3,2);   \
+				SHUFFLE_TWO(FUNC,3,0,3,3);   \
+				SHUFFLE_TWO(FUNC,3,1,0,0);   \
+				SHUFFLE_TWO(FUNC,3,1,0,1);   \
+				SHUFFLE_TWO(FUNC,3,1,0,2);   \
+				SHUFFLE_TWO(FUNC,3,1,0,3);   \
+				SHUFFLE_TWO(FUNC,3,1,1,0);   \
+				SHUFFLE_TWO(FUNC,3,1,1,1);   \
+				SHUFFLE_TWO(FUNC,3,1,1,2);   \
+				SHUFFLE_TWO(FUNC,3,1,1,3);   \
+				SHUFFLE_TWO(FUNC,3,1,2,0);   \
+				SHUFFLE_TWO(FUNC,3,1,2,1);   \
+				SHUFFLE_TWO(FUNC,3,1,2,2);   \
+				SHUFFLE_TWO(FUNC,3,1,2,3);   \
+				SHUFFLE_TWO(FUNC,3,1,3,0);   \
+				SHUFFLE_TWO(FUNC,3,1,3,1);   \
+				SHUFFLE_TWO(FUNC,3,1,3,2);   \
+				SHUFFLE_TWO(FUNC,3,1,3,3);   \
+				SHUFFLE_TWO(FUNC,3,2,0,0);   \
+				SHUFFLE_TWO(FUNC,3,2,0,1);   \
+				SHUFFLE_TWO(FUNC,3,2,0,2);   \
+				SHUFFLE_TWO(FUNC,3,2,0,3);   \
+				SHUFFLE_TWO(FUNC,3,2,1,0);   \
+				SHUFFLE_TWO(FUNC,3,2,1,1);   \
+				SHUFFLE_TWO(FUNC,3,2,1,2);   \
+				SHUFFLE_TWO(FUNC,3,2,1,3);   \
+				SHUFFLE_TWO(FUNC,3,2,2,0);   \
+				SHUFFLE_TWO(FUNC,3,2,2,1);   \
+				SHUFFLE_TWO(FUNC,3,2,2,2);   \
+				SHUFFLE_TWO(FUNC,3,2,2,3);   \
+				SHUFFLE_TWO(FUNC,3,2,3,0);   \
+				SHUFFLE_TWO(FUNC,3,2,3,1);   \
+				SHUFFLE_TWO(FUNC,3,2,3,2);   \
+				SHUFFLE_TWO(FUNC,3,2,3,3);   \
+				SHUFFLE_TWO(FUNC,3,3,0,0);   \
+				SHUFFLE_TWO(FUNC,3,3,0,1);   \
+				SHUFFLE_TWO(FUNC,3,3,0,2);   \
+				SHUFFLE_TWO(FUNC,3,3,0,3);   \
+				SHUFFLE_TWO(FUNC,3,3,1,0);   \
+				SHUFFLE_TWO(FUNC,3,3,1,1);   \
+				SHUFFLE_TWO(FUNC,3,3,1,2);   \
+				SHUFFLE_TWO(FUNC,3,3,1,3);   \
+				SHUFFLE_TWO(FUNC,3,3,2,0);   \
+				SHUFFLE_TWO(FUNC,3,3,2,1);   \
+				SHUFFLE_TWO(FUNC,3,3,2,2);   \
+				SHUFFLE_TWO(FUNC,3,3,2,3);   \
+				SHUFFLE_TWO(FUNC,3,3,3,0);   \
+				SHUFFLE_TWO(FUNC,3,3,3,1);   \
+				SHUFFLE_TWO(FUNC,3,3,3,2);   \
+				SHUFFLE_TWO(FUNC,3,3,3,3);   \
+			}				\
+	}
 
 
 
@@ -353,6 +1011,10 @@ private:																	\
 #define GET_RUN(FUNC,VAL)    RUN(GET,FUNC,VAL)
 #define LOAD_RUN(FUNC,VAL)    RUN(LOAD,FUNC,VAL)
 #define STORE_RUN(FUNC,VAL)    RUN(STORE,FUNC,VAL)
+#define ZE_RUN(FUNC,VAL)    RUN(ZE,FUNC,VAL)
+#define SHUFFLEEPI32_RUN(FUNC,VAL)    RUN(SHUFFLEEPI32,FUNC,VAL)
+#define SHIFFT_IMM_RUN(FUNC,VAL)    RUN(SHIFFT_IMM,FUNC,VAL)
+#define SHUFFLEPS(FUNC,VAL)    RUN(SHUFFLEPS,FUNC,VAL)
 
 
 
@@ -394,6 +1056,19 @@ TEST(BI,_mm_cmpgt_ps,FLOAT)
 TEST(BI,_mm_and_ps,FLOAT)
 TEST(BI,_mm_cmple_ps,FLOAT)
 
+TEST(ZE,_mm_setzero_si128,INTEGER)
+TEST(SHUFFLEEPI32,_mm_shuffle_epi32,INTEGER)
+TEST(BI,_mm_packs_epi32,INTEGER)
+TEST(BI,_mm_unpackhi_epi8,INTEGER)
+TEST(BI,_mm_unpacklo_epi8,INTEGER)
+TEST(BI,_mm_mulhi_epi16,INTEGER)
+TEST(BI,_mm_mullo_epi16,INTEGER)
+TEST(BI,_mm_unpacklo_epi16,INTEGER)
+TEST(BI,_mm_add_epi32,INTEGER)
+TEST(BI,_mm_unpackhi_epi16,INTEGER)
+TEST(SHIFFT_IMM,_mm_srai_epi32,INTEGER)
+TEST(SHUFFLEPS,_mm_shuffle_ps,FLOAT)
+
 int main()
 {
 //	BI_RUN(_mm_max_epu8,t0);
@@ -413,18 +1088,29 @@ int main()
 //	LOAD_RUN(_mm_load_ss,t13);
 //	STORE_RUN(_mm_store_ss,t14);
 
-	SET_RUN(_mm_set1_epi8,t15);
-	BI_RUN(_mm_xor_si128,t16);
-	BI_RUN(_mm_cmpgt_epi8,t17);
-	BI_RUN(_mm_and_si128,t18);
-	BI_RUN(_mm_andnot_si128,t19);
-	BI_RUN(_mm_subs_epu8,t20);
-	SET_RUN(_mm_set1_epi16,t21);
-	BI_RUN(_mm_cmpgt_epi16,t22);
-	SET_RUN(_mm_set1_ps,t23);
-	BI_RUN(_mm_cmpgt_ps,t24);
-	BI_RUN(_mm_and_ps,t25);
-	BI_RUN(_mm_cmple_ps,t26);
+//	SET_RUN(_mm_set1_epi8,t15);
+//	BI_RUN(_mm_xor_si128,t16);
+//	BI_RUN(_mm_cmpgt_epi8,t17);
+//	BI_RUN(_mm_and_si128,t18);
+//	BI_RUN(_mm_andnot_si128,t19);
+//	BI_RUN(_mm_subs_epu8,t20);
+//	SET_RUN(_mm_set1_epi16,t21);
+//	BI_RUN(_mm_cmpgt_epi16,t22);
+//	SET_RUN(_mm_set1_ps,t23);
+//	BI_RUN(_mm_cmpgt_ps,t24);
+//	BI_RUN(_mm_and_ps,t25);
+//	BI_RUN(_mm_cmple_ps,t26);
+
+//	ZE_RUN(_mm_setzero_si128,t27);
+//	SHUFFLEEPI32_RUN(_mm_shuffle_epi32,t28);
+//	BI_RUN(_mm_packs_epi32,t29);
+//	BI_RUN(_mm_unpackhi_epi8,t30);
+//	BI_RUN(_mm_unpacklo_epi8,t31);
+//	BI_RUN(_mm_mulhi_epi16,t32);
+//	BI_RUN(_mm_mullo_epi16,t33);
+//	BI_RUN(_mm_unpacklo_epi16,t34);
+	BI_RUN(_mm_add_epi32,t35);
+	SHIFFT_IMM_RUN(_mm_srai_epi32,t36);
 
 	return 0;
 

@@ -3,6 +3,7 @@
 *.user
 *~
 .*.swp
+.*.sw[a-z]
 .DS_Store
 .sw[a-z]
 Thumbs.db
