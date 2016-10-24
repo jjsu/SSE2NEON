@@ -32,7 +32,7 @@ adb push test_neon /data
 
 
 echo "Step.4 ***running on ARM****"
-adb shell "/data/test_neon < /data/input" > results/NEON.log
+adb shell "/data/test_neon " > results/NEON.log
 
 if [ $? -ne 0 ]
 then
@@ -41,7 +41,7 @@ then
 fi
 
 echo "Step.5 ***running on x86_64****"
-$BIN_DIR/test_sse < input > results/SSE.log
+$BIN_DIR/test_sse > results/SSE.log
 
 if [ $? -ne 0 ]
 then
@@ -51,7 +51,7 @@ fi
 
 echo "Step.6 compare the results "
 dos2unix $BIN_DIR/results/NEON.log
-diff $BIN_DIR/results/SSE.log $BIN_DIR/results/NEON.log
+diff $BIN_DIR/results/SSE.log $BIN_DIR/results/NEON.log > /dev/null
 
 if [ $? -ne 0 ]
 then

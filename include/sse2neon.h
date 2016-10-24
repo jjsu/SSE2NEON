@@ -324,7 +324,7 @@ INLINE __m128 _mm_set1_ps(float w)
 #define _mm_set_ps1 _mm_set1_ps
 
 //todo ~~~~~~~~~~~~~~~~~~~~~~~~~
-/* Shuffles the 4 signed or unsigned 32-bit integers in a as specified by imm. */
+/* Snhuffles the 4 signed or unsigned 32-bit integers in a as specified by imm. */
 INLINE __m128i _mm_shuffle_epi32 (__m128i a, int imm)
 {
 	switch (imm)
@@ -461,6 +461,11 @@ INLINE __m128i _mm_unpackhi_epi32(__m128i a, __m128i b)
 	int32x2x2_t result = vzip_s32(a1, b1);
 
 	return vcombine_s32(result.val[0], result.val[1]);
+}
+
+INLINE __m128 _mm_cvtepi32_ps(__m128i a)
+{
+	return vcvtq_f32_s32(a);
 }
 
 /***************************************************************************
