@@ -122,6 +122,39 @@ INLINE __m128i _mm_add_epi32(__m128i a, __m128i b)
 {
 	return vaddq_s32(a, b);
 }
+
+/* Subtracts the 4 signed or unsigned 32-bit integers of b from the 4 signed or unsigned 32-bit integers of a.
+ * r0 := a0 - b0
+ * r1 := a1 - b1
+ * r2 := a2 - b2
+ * r3 := a3 - b3
+ * */
+INLINE __m128i _mm_sub_epi32(__m128i a, __m128i b)
+{
+	return vsubq_s32(a, b);
+}
+
+/* Adds the four single-precision, floating-point values of a and b.
+ * r0 := a0 + b0
+ * r1 := a1 + b1
+ * r2 := a2 + b2
+ * r3 := a3 + b3
+ * */
+INLINE __m128 _mm_add_ps(__m128 a, __m128 b)
+{
+	return vaddq_f32(a, b);
+}
+
+/* Subtracts the four single-precision, floating-point values of a and b.
+ * r0 := a0 - b0
+ * r1 := a1 - b1
+ * r2 := a2 - b2
+ * r3 := a3 - b3
+ * */
+INLINE __m128 _mm_sub_ps(__m128 a, __m128 b)
+{
+	return vsubq_f32(a, b);
+}
 /***************************************************************************
  *                Multiply
  ***************************************************************************/
@@ -148,6 +181,19 @@ INLINE __m128i _mm_mullo_epi16(__m128i a, __m128i b)
 	return (__m128i)vmulq_s16((int16x8_t)a, (int16x8_t)b);
 }
 
+/* Multiplies the four single-precision, floating-point values of a and b.
+ * r0 := a0 * b0
+ * r1 := a1 * b1
+ * r2 := a2 * b2
+ * r3 := a3 * b3
+ * */
+INLINE __m128 _mm_mul_ps(__m128 a, __m128 b)
+{
+	//todo:
+	//NEON:(-2.33512e-28) * (-2.13992e-13)=0
+	//SSE: (-2.33512e-28) * (-2.13992e-13)=4.99689e-41
+	return vmulq_f32(a, b);
+}
 /***************************************************************************
  *                logic
  ***************************************************************************/
@@ -386,6 +432,13 @@ INLINE __m128i _mm_setzero_si128()
 	return vdupq_n_s32(0);
 }
 
+/* Clears the four single-precision, floating-point values.
+ * r0 := r1 := r2 := r3 := 0.0 
+ * */
+INLINE __m128 _mm_setzero_ps(void)
+{
+	return vdupq_n_f32(0);
+}
 /***************************************************************************
  *                convert 
  ***************************************************************************/
@@ -475,7 +528,34 @@ INLINE __m128 _mm_cvtepi32_ps(__m128i a)
 {
 	return vcvtq_f32_s32(a);
 }
+/* Converts the four single-precision, floating-point values of a to signed 32-bit integer values.
+ * r0 := (int) a0
+ * r1 := (int) a1
+ * r2 := (int) a2
+ * r3 := (int) a3
+ * */
+INLINE __m128i _mm_cvtps_epi32(__m128 a)
+{
+	//todo:precision
+	//NaN -0
+	return vcvtq_s32_f32(a);
+}
 
+/* Packs the 16 signed 16-bit integers from a and b into 8-bit unsigned integers and saturates.
+ *
+ * r0 := UnsignedSaturate(a0)
+ * r1 := UnsignedSaturate(a1)
+ * ...
+ * r7 := UnsignedSaturate(a7)
+ * r8 := UnsignedSaturate(b0)
+ * r9 := UnsignedSaturate(b1)
+ * ...
+ * r15 := UnsignedSaturate(b7)
+ * */
+INLINE __m128i _mm_packus_epi16(const __m128i a, const __m128i b)
+{
+	return (__m128i)vcombine_u8(vqmovun_s16((int16x8_t)a), vqmovun_s16((int16x8_t)b));
+}
 /***************************************************************************
  *                shift 
  ***************************************************************************/
