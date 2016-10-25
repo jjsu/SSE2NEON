@@ -18,8 +18,8 @@
 #include <fstream>
 #include <cstdint>
 #include <cstdlib>
-#include <ctime>
 #include <string>
+#include <cstring>
 
 #ifdef __GNUC__                                               
 #  define CV_DECL_ALIGNED(x) __attribute__ ((aligned (x)))    
@@ -42,6 +42,8 @@
 #else
 #include "sse2neon.h"
 #endif
+
+#define SET_NUM 73
 
 void print(std::string s, int8_t *a, int n)
 {
@@ -133,34 +135,56 @@ void print(std::string s, double  *a, int n)
 #define STORE_FLOAT(X,Y) _mm_store_ps((float *)X, Y)
 #define STOREU_FLOAT(X,Y) _mm_storeu_ps((float *)X, Y)
 
+#define LOAD_FUNC_FLOAT(FUNC,X) FUNC((const float*)X)
+#define LOAD_FUNC_INTEGER(FUNC,X) FUNC((const __m128i*)X)
+#define STORE_FUNC_FLOAT(FUNC,X,Y) FUNC((float*)X,Y)
+#define STORE_FUNC_INTEGER(FUNC,X,Y) FUNC((__m128i*)X,Y)
+
+#define NULLARY_FOR_LOOP(FUNC,TYPE,LD_TYPE,SD_TYPE,VAL_TYPE,RESULT_TYPE)	\
+		for (size_t k = 0; k < N; k++)										\
+		{																	\
+			std::cout << "iter." << count++ << " : " << std::endl;			\
+			TYPE* c = (TYPE*)(buf2)+k;										\
+			std::cout << "\t(c) offset : ("									\
+			<< k << ")" << std::endl;										\
+			RESULT_TYPE  t;													\
+																			\
+			t = FUNC ();													\
+																			\
+			if (k==0)														\
+				STORE_ ## SD_TYPE(c,t);										\
+			else															\
+				STOREU_ ## SD_TYPE(c,t);									\
+			print("\tc=OP()", c, N);										\
+		}																	\
 
 #define UNARY_FOR_LOOP(FUNC,TYPE,LD_TYPE,SD_TYPE,VAL_TYPE,RESULT_TYPE)	\
 for (size_t i = 0; i < N; i++)											\
-	for (size_t k = 0; k < N; k++)									\
-	{																\
-		std::cout << "iter." << count++ << " : " << std::endl;		\
-		TYPE* a = (TYPE*)(buf0)+i;									\
-		TYPE* c = (TYPE*)(buf2)+k;									\
-		std::cout << "\t(a,c) offset : ("							\
-		<< i << ","   												\
-		<< k << ")" << std::endl;									\
-		VAL_TYPE r0, r1;											\
-		RESULT_TYPE  t;												\
-																	\
-		if (i == 0)													\
-			r0 = LOAD_ ## LD_TYPE(a);								\
-		else														\
-			r0 = LOADU_ ## LD_TYPE(a);								\
-																	\
-		t = FUNC (r0);												\
-																	\
-		if (k==0)													\
-			STORE_ ## SD_TYPE(c,t);									\
-		else														\
-			STOREU_ ## SD_TYPE(c,t);								\
-		print("\ta        ", a, N);									\
-		print("\tc=OP(a)", c, N);									\
-	}																\
+	for (size_t k = 0; k < N; k++)										\
+	{																	\
+		std::cout << "iter." << count++ << " : " << std::endl;			\
+		TYPE* a = (TYPE*)(buf0)+i;										\
+		TYPE* c = (TYPE*)(buf2)+k;										\
+		std::cout << "\t(a,c) offset : ("								\
+		<< i << ","   													\
+		<< k << ")" << std::endl;										\
+		VAL_TYPE r0, r1;												\
+		RESULT_TYPE  t;													\
+																		\
+		if (i == 0)														\
+			r0 = LOAD_ ## LD_TYPE(a);									\
+		else															\
+			r0 = LOADU_ ## LD_TYPE(a);									\
+																		\
+		t = FUNC (r0);													\
+																		\
+		if (k==0)														\
+			STORE_ ## SD_TYPE(c,t);										\
+		else															\
+			STOREU_ ## SD_TYPE(c,t);									\
+		print("\ta        ", a, N);										\
+		print("\tc=OP(a)", c, N);										\
+	}																	\
 
 
 #define BINARY_FOR_LOOP(FUNC,TYPE,LD_TYPE,SD_TYPE,VAL_TYPE,RESULT_TYPE)	\
@@ -198,7 +222,94 @@ for (size_t i = 0; i < N; i++)											\
 			print("\tb        ", b, N);									\
 			print("\tc=OP(a,b)", c, N);									\
 		}																\
-																						
+
+
+/*maybe need unaligned LOAD*/
+#define LOAD_FOR_LOOP(FUNC,TYPE,LD_TYPE,SD_TYPE,VAL_TYPE,RESULT_TYPE)	\
+		for (size_t k = 0; k < N; k++)									\
+		{																\
+			std::cout << "iter." << count++ << " : " << std::endl;		\
+			TYPE* a = (TYPE*)(buf0);									\
+			TYPE* c = (TYPE*)(buf2)+k;									\
+			std::cout << "\t(c) offset : ("								\
+			<< k << ")" << std::endl;									\
+			RESULT_TYPE  t;												\
+																		\
+			t = LOAD_FUNC_ ## LD_TYPE(FUNC,a);							\
+																		\
+			if (k==0)													\
+				STORE_ ## SD_TYPE(c,t);									\
+			else														\
+				STOREU_ ## SD_TYPE(c,t);								\
+			print("\ta        ", a, N);									\
+			print("\tc=OP(a)", c, N);									\
+		}																\
+
+/*maybe need unaligned STORE*/
+#define STORE_FOR_LOOP(FUNC,TYPE,LD_TYPE,SD_TYPE,VAL_TYPE,RESULT_TYPE)	\
+for (size_t i = 0; i < N; i++)											\
+		{																\
+			std::cout << "iter." << count++ << " : " << std::endl;		\
+			TYPE* a = (TYPE*)(buf0)+i;									\
+			TYPE* c = (TYPE*)(buf2);									\
+			/*disable warning*/											\
+			memcpy(buf2,buf1,32);										\
+			std::cout << "\t(a) offset : ("								\
+			<< i << ")" << std::endl;									\
+			VAL_TYPE r0;												\
+																		\
+			print("\ta        ", a, N);									\
+			print("\tc        ", c, N);									\
+			if (i == 0)													\
+				r0 = LOAD_ ## LD_TYPE(a);								\
+			else														\
+				r0 = LOADU_ ## LD_TYPE(a);								\
+																		\
+			STORE_FUNC_ ## LD_TYPE(FUNC,c,r0);							\
+																		\
+			print("\tc=OP(*c,a)", c, N);								\
+		}																\
+
+#define SET_FOR_LOOP(FUNC,TYPE,LD_TYPE,SD_TYPE,VAL_TYPE,RESULT_TYPE)	\
+		for (size_t k = 0; k < N; k++)									\
+		{																\
+			std::cout << "iter." << count++ << " : " << std::endl;		\
+			TYPE* c = (TYPE*)(buf2)+k;									\
+			std::cout << "\t(c) offset : ("								\
+			<< k << ")" << std::endl;									\
+			RESULT_TYPE  t;												\
+																		\
+			t = FUNC (SET_NUM);											\
+																		\
+			if (k==0)													\
+				STORE_ ## SD_TYPE(c,t);									\
+			else														\
+				STOREU_ ## SD_TYPE(c,t);								\
+			print("\tc=OP(SET_NUM)", c, N);								\
+		}																\
+
+#define GET_FOR_LOOP(FUNC,TYPE,LD_TYPE,SD_TYPE,VAL_TYPE,RESULT_TYPE)	\
+for (size_t i = 0; i < N; i++)											\
+		{																\
+			std::cout << "iter." << count++ << " : " << std::endl;		\
+			/*disable warning*/											\
+			memcpy(buf2,buf0,32);										\
+			TYPE* a = (TYPE*)(buf2)+i;									\
+			std::cout << "\t(a) offset : ("								\
+			<< i << ")" << std::endl;									\
+			VAL_TYPE r0;												\
+																		\
+			if (i == 0)													\
+				r0 = LOAD_ ## LD_TYPE(a);								\
+			else														\
+				r0 = LOADU_ ## LD_TYPE(a);								\
+																		\
+			auto t = FUNC (r0);											\
+																		\
+			print("\ta        ", a, N);									\
+			std::cout<<"\tc=OP(a) "<<t<<std::endl;						\
+		}																\
+
 
 
 #define TEST_DEFINE(PREFIX,FUNC,TYPE,LD_TYPE,SD_TYPE,VAL_TYPE,RESULT_TYPE)	\
@@ -255,6 +366,16 @@ void init()									\
 	}										\
 }											\
 
+#define NULLARY_INIT						\
+void init()									\
+{											\
+}											\
+
+#define LOAD_INIT UNARY_INIT
+#define STORE_INIT BINARY_INIT
+#define SET_INIT NULLARY_INIT
+#define GET_INIT UNARY_INIT
+
 #define TEST_DEFINE_INTEGER(PREFIX,FUNC)								\
 	TEST_DEFINE(PREFIX,FUNC,uint8_t ,INTEGER,INTEGER,__m128i,__m128i);	\
 	TEST_DEFINE(PREFIX,FUNC,int8_t  ,INTEGER,INTEGER,__m128i,__m128i);	\
@@ -291,7 +412,7 @@ void init()									\
 	TEST_RUN(FUNC,int32_t);												\
 	TEST_RUN(FUNC,uint64_t);											\
 	TEST_RUN(FUNC,int64_t);												\
-						
+
 #define TEST_RUN_FLOAT(PREFIX,FUNC)										\
 	TEST_RUN(FUNC,float);												\
 	TEST_RUN(FUNC,double);												\
@@ -325,97 +446,97 @@ private:																\
 #define GET_RUN(FUNC,VAL)    RUN(GET,FUNC,VAL)
 #define LOAD_RUN(FUNC,VAL)    RUN(LOAD,FUNC,VAL)
 #define STORE_RUN(FUNC,VAL)    RUN(STORE,FUNC,VAL)
-#define ZE_RUN(FUNC,VAL)    RUN(ZE,FUNC,VAL)
-#define SHUFFLEEPI32_RUN(FUNC,VAL)    RUN(SHUFFLEEPI32,FUNC,VAL)
-#define SHIFFT_IMM_RUN(FUNC,VAL)    RUN(SHIFFT_IMM,FUNC,VAL)
-#define SHUFFLEPS(FUNC,VAL)    RUN(SHUFFLEPS,FUNC,VAL)
-#define SI_RUN(FUNC,VAL)    RUN(SI,FUNC,VAL)
+#define NULLARY_RUN(FUNC,VAL)    RUN(NULLARY,FUNC,VAL)
+//#define SHUFFLEEPI32_RUN(FUNC,VAL)    RUN(SHUFFLEEPI32,FUNC,VAL)
+//#define SHIFFT_IMM_RUN(FUNC,VAL)    RUN(SHIFFT_IMM,FUNC,VAL)
+//#define SHUFFLEPS(FUNC,VAL)    RUN(SHUFFLEPS,FUNC,VAL)
+//#define SI_RUN(FUNC,VAL)    RUN(SI,FUNC,VAL)
 
-TEST(BINARY,_mm_max_epu8,INTEGER)
-TEST(BINARY,_mm_max_epi16,INTEGER)
-TEST(BINARY,_mm_max_ps,FLOAT)
-TEST(BINARY,_mm_min_epu8,INTEGER)
-TEST(BINARY,_mm_min_epi16,INTEGER)
-TEST(BINARY,_mm_min_ps,FLOAT)
-TEST(BINARY,_mm_add_epi16,INTEGER)
-TEST(BINARY,_mm_sub_epi16,INTEGER)
-TEST(BINARY,_mm_adds_epu16,INTEGER)
+TEST(BINARY, _mm_max_epu8, INTEGER)
+TEST(BINARY, _mm_max_epi16, INTEGER)
+TEST(BINARY, _mm_max_ps, FLOAT)
+TEST(BINARY, _mm_min_epu8, INTEGER)
+TEST(BINARY, _mm_min_epi16, INTEGER)
+TEST(BINARY, _mm_min_ps, FLOAT)
+TEST(BINARY, _mm_add_epi16, INTEGER)
+TEST(BINARY, _mm_sub_epi16, INTEGER)
+TEST(BINARY, _mm_adds_epu16, INTEGER)
 
-//TEST(SET,_mm_cvtsi32_si128,INTEGER)
-//TEST(GET,_mm_cvtsi128_si32,INTEGER)
-//TEST(LOAD,_mm_loadl_epi64,INTEGER)
-//TEST(STORE,_mm_storel_epi64,INTEGER)
-//TEST(LOAD,_mm_load_ss,FLOAT)
-//TEST(STORE,_mm_store_ss,FLOAT)
+TEST(SET,_mm_cvtsi32_si128,INTEGER)
+TEST(GET,_mm_cvtsi128_si32,INTEGER)
+TEST(LOAD, _mm_loadl_epi64, INTEGER)
+TEST(STORE, _mm_storel_epi64, INTEGER)
+TEST(LOAD, _mm_load_ss, FLOAT)
+TEST(STORE, _mm_store_ss, FLOAT)
 
-//TEST(SET,_mm_set1_epi8,INTEGER)
-TEST(BINARY,_mm_xor_si128,INTEGER)
-TEST(BINARY,_mm_cmpgt_epi8,INTEGER)
-TEST(BINARY,_mm_and_si128,INTEGER)
-TEST(BINARY,_mm_andnot_si128,INTEGER)
-TEST(BINARY,_mm_subs_epu8,INTEGER)
-//TEST(SET,_mm_set1_epi16,INTEGER)
-TEST(BINARY,_mm_cmpgt_epi16,INTEGER)
-//TEST(SET,_mm_set1_ps,FLOAT)
-TEST(BINARY,_mm_cmpgt_ps,FLOAT)
-TEST(BINARY,_mm_and_ps,FLOAT)
-TEST(BINARY,_mm_cmple_ps,FLOAT)
+TEST(SET,_mm_set1_epi8,INTEGER)
+TEST(BINARY, _mm_xor_si128, INTEGER)
+TEST(BINARY, _mm_cmpgt_epi8, INTEGER)
+TEST(BINARY, _mm_and_si128, INTEGER)
+TEST(BINARY, _mm_andnot_si128, INTEGER)
+TEST(BINARY, _mm_subs_epu8, INTEGER)
+TEST(SET,_mm_set1_epi16,INTEGER)
+TEST(BINARY, _mm_cmpgt_epi16, INTEGER)
+TEST(SET,_mm_set1_ps,FLOAT)
+TEST(BINARY, _mm_cmpgt_ps, FLOAT)
+TEST(BINARY, _mm_and_ps, FLOAT)
+TEST(BINARY, _mm_cmple_ps, FLOAT)
 
-//TEST(ZE,_mm_setzero_si128,INTEGER)
+TEST(NULLARY,_mm_setzero_si128,INTEGER)
 //TEST(SHUFFLEEPI32,_mm_shuffle_epi32,INTEGER)
-TEST(BINARY,_mm_packs_epi32,INTEGER)
-TEST(BINARY,_mm_unpackhi_epi8,INTEGER)
-TEST(BINARY,_mm_unpacklo_epi8,INTEGER)
-TEST(BINARY,_mm_mulhi_epi16,INTEGER)
-TEST(BINARY,_mm_mullo_epi16,INTEGER)
-TEST(BINARY,_mm_unpacklo_epi16,INTEGER)
-TEST(BINARY,_mm_add_epi32,INTEGER)
-TEST(BINARY,_mm_unpackhi_epi16,INTEGER)
+TEST(BINARY, _mm_packs_epi32, INTEGER)
+TEST(BINARY, _mm_unpackhi_epi8, INTEGER)
+TEST(BINARY, _mm_unpacklo_epi8, INTEGER)
+TEST(BINARY, _mm_mulhi_epi16, INTEGER)
+TEST(BINARY, _mm_mullo_epi16, INTEGER)
+TEST(BINARY, _mm_unpacklo_epi16, INTEGER)
+TEST(BINARY, _mm_add_epi32, INTEGER)
+TEST(BINARY, _mm_unpackhi_epi16, INTEGER)
 //TEST(SHIFFT_IMM,_mm_srai_epi32,INTEGER)
 //TEST(SHUFFLEPS,_mm_shuffle_ps,FLOAT)
 //TEST(SI,_mm_cvtepi32_ps,I2F)
 
 int main()
 {
-	BINARY_RUN(_mm_max_epu8,t0);
-	BINARY_RUN(_mm_max_epi16,t1);
-	BINARY_RUN(_mm_max_ps,t2);
-	BINARY_RUN(_mm_min_epu8,t3);
-	BINARY_RUN(_mm_min_epi16,t4);
-	BINARY_RUN(_mm_min_ps,t5);
-	BINARY_RUN(_mm_add_epi16,t6);
-	BINARY_RUN(_mm_sub_epi16,t7);
-	BINARY_RUN(_mm_adds_epu16,t8);
-	//
-	//	SET_RUN(_mm_cvtsi32_si128,t9);
-	//	GET_RUN(_mm_cvtsi128_si32,t10);
-	//	LOAD_RUN(_mm_loadl_epi64,t11);
-	//	STORE_RUN(_mm_storel_epi64,t12);
-	//	LOAD_RUN(_mm_load_ss,t13);
-	//	STORE_RUN(_mm_store_ss,t14);
-
-	//	SET_RUN(_mm_set1_epi8,t15);
-	BINARY_RUN(_mm_xor_si128,t16);
-	BINARY_RUN(_mm_cmpgt_epi8,t17);
-	BINARY_RUN(_mm_and_si128,t18);
-	BINARY_RUN(_mm_andnot_si128,t19);
-	BINARY_RUN(_mm_subs_epu8,t20);
-	//	SET_RUN(_mm_set1_epi16,t21);
-	BINARY_RUN(_mm_cmpgt_epi16,t22);
-
-	//	SET_RUN(_mm_set1_ps,t23);
-	BINARY_RUN(_mm_cmpgt_ps,t24);
-	BINARY_RUN(_mm_and_ps,t25);
-	BINARY_RUN(_mm_cmple_ps,t26);
-
-	//	ZE_RUN(_mm_setzero_si128,t27);
-	//	SHUFFLEEPI32_RUN(_mm_shuffle_epi32,t28);
-	BINARY_RUN(_mm_packs_epi32,t29);
-	BINARY_RUN(_mm_unpackhi_epi8,t30);
-	BINARY_RUN(_mm_unpacklo_epi8,t31);
-	BINARY_RUN(_mm_mulhi_epi16,t32);
-	BINARY_RUN(_mm_mullo_epi16,t33);
-	BINARY_RUN(_mm_unpacklo_epi16,t34);
+//	BINARY_RUN(_mm_max_epu8, t0);
+//	BINARY_RUN(_mm_max_epi16, t1);
+//	BINARY_RUN(_mm_max_ps, t2);
+//	BINARY_RUN(_mm_min_epu8, t3);
+//	BINARY_RUN(_mm_min_epi16, t4);
+//	BINARY_RUN(_mm_min_ps, t5);
+//	BINARY_RUN(_mm_add_epi16, t6);
+//	BINARY_RUN(_mm_sub_epi16, t7);
+//	BINARY_RUN(_mm_adds_epu16, t8);
+//
+//	SET_RUN(_mm_cvtsi32_si128,t9);
+//	GET_RUN(_mm_cvtsi128_si32,t10);
+//	LOAD_RUN(_mm_loadl_epi64, t11);
+//	STORE_RUN(_mm_storel_epi64, t12);
+//	LOAD_RUN(_mm_load_ss, t13);
+//	STORE_RUN(_mm_store_ss, t14);
+//
+//	SET_RUN(_mm_set1_epi8,t15);
+//	BINARY_RUN(_mm_xor_si128, t16);
+//	BINARY_RUN(_mm_cmpgt_epi8, t17);
+//	BINARY_RUN(_mm_and_si128, t18);
+//	BINARY_RUN(_mm_andnot_si128, t19);
+//	BINARY_RUN(_mm_subs_epu8, t20);
+//	SET_RUN(_mm_set1_epi16,t21);
+//	BINARY_RUN(_mm_cmpgt_epi16, t22);
+//
+//	SET_RUN(_mm_set1_ps,t23);
+//	BINARY_RUN(_mm_cmpgt_ps, t24);
+//	BINARY_RUN(_mm_and_ps, t25);
+//	BINARY_RUN(_mm_cmple_ps, t26);
+//
+//	NULLARY_RUN(_mm_setzero_si128,t27);
+//	//	SHUFFLEEPI32_RUN(_mm_shuffle_epi32,t28);
+//	BINARY_RUN(_mm_packs_epi32, t29);
+//	BINARY_RUN(_mm_unpackhi_epi8, t30);
+//	BINARY_RUN(_mm_unpacklo_epi8, t31);
+//	BINARY_RUN(_mm_mulhi_epi16, t32);
+//	BINARY_RUN(_mm_mullo_epi16, t33);
+	BINARY_RUN(_mm_unpacklo_epi16, t34);
 	BINARY_RUN(_mm_add_epi32, t35);
 	//SHIFFT_IMM_RUN(_mm_srai_epi32, t36);
 	//SI_RUN(_mm_cvtepi32_ps, t37);
@@ -423,6 +544,8 @@ int main()
 	return 0;
 
 }
+
+
 
 
 

@@ -4,7 +4,7 @@ CXX := g++
 ARM_CXX := arm-linux-gnueabi-g++
 
 CXXFLAGS := -std=c++11 -msse3 -Wall -I../include
-ARM_CXXFLAGS := -std=c++11 -march=armv7-a -mfloat-abi=softfp -mfpu=neon -DARM -I../include
+ARM_CXXFLAGS := -std=c++11 -Wall -march=armv7-a -mfloat-abi=softfp -mfpu=neon -DARM -I../include
 
 .PHONY : all
 all: test_sse test_neon gen_input
@@ -24,9 +24,10 @@ install:
 	cp test_sse test_neon gen_input $(PWD)/../bin/
 
 
-.PHONY : cleanall cleanobj
-clean : cleanobj cleandiff
+.PHONY : clean 
+clean : cleanobj 
 	-rm -rf test_sse test_neon gen_input
 
+.PHONY : cleanobj
 cleanobj :
 	-rm -rf *.o

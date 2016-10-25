@@ -50,6 +50,10 @@ INLINE __m128i _mm_max_epi16 (__m128i a, __m128i b)
 	return (__m128i)vmaxq_s16((int16x8_t) a, (int16x8_t) b);
 }
 
+/* todo: when the input data contain the NaN. => different behave
+	BUT, in actual use, NaN ?
+Need MORE tests?
+ */
 INLINE __m128 _mm_max_ps(__m128 a, __m128 b)
 {
 	return vmaxq_f32(a, b);
@@ -65,6 +69,10 @@ INLINE __m128i _mm_min_epi16(__m128i a, __m128i b)
 	return (__m128i)vminq_s16((int16x8_t)a, (int16x8_t)b);
 }
 
+/* todo: when the input data contain the NaN. => different behave
+	BUT, in actual use, NaN ?
+Need MORE tests?
+ */
 INLINE __m128 _mm_min_ps(__m128 a, __m128 b)
 {
 	return vminq_f32(a, b);
