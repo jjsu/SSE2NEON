@@ -30,6 +30,7 @@
 
 
 typedef float32x4_t __m128;
+typedef float32x2_t __m64;
 typedef int32x4_t __m128i;
 
 /*  expands to the following value */
@@ -112,6 +113,27 @@ INLINE __m128i _mm_subs_epu16 (__m128i a, __m128i b)
 	return (__m128i)vqsubq_u16((uint16x8_t) a, (uint16x8_t) b);
 }
 
+/* Adds the 8 signed 16-bit integers in a to the 8 signed 16-bit integers in b and saturates.
+ * r0 := SignedSaturate(a0 + b0)
+ * r1 := SignedSaturate(a1 + b1)
+ * ...
+ * r7 := SignedSaturate(a7 + b7)
+ * */
+INLINE __m128i _mm_adds_epi16 (__m128i a, __m128i b)
+{
+	return (__m128i)vqaddq_s16((int16x8_t)a, (int16x8_t)b); 
+}
+
+/* Subtracts the 8 signed 16-bit integers of b from the 8 signed 16-bit integers of a and saturates.
+ * r0 := SignedSaturate(a0 - b0)
+ * r1 := SignedSaturate(a1 - b1)
+ * ...
+ * r7 := SignedSaturate(a7 - b7)
+ * */
+INLINE __m128i _mm_subs_epi16 (__m128i a, __m128i b)
+{
+	return (__m128i)vqsubq_s16((int16x8_t) a, (int16x8_t) b);
+}
 /* Adds the 4 signed or unsigned 32-bit integers in a to the 4 signed or unsigned 32-bit integers in b.
  * r0 := a0 + b0
  * r1 := a1 + b1
@@ -155,6 +177,14 @@ INLINE __m128 _mm_sub_ps(__m128 a, __m128 b)
 {
 	return vsubq_f32(a, b);
 }
+
+/* The haddps instruction performs a horizontal add, meaning that adjacent elements in the same operand are added together. Each 128-bit argument is considered as four 32-bit floating-point elements, numbered from 0 to 3, with 3 being the high-order element. The result of the operation on operand a (A3, A2, A1, A0) and operand b (B3, B2, B1, B0) is (B3 + B2, B1 + B0, A3 + A2, A1 + A0).
+ * This routine is only available as an intrinsic*/
+INLINE __m128 _mm_hadd_ps(__m128 a, __m128 b)
+{
+	return vcombine_f32(vpadd_f32(vget_low_f32(a), vget_high_f32(a)), vpadd_f32(vget_low_f32(b), vget_high_f32(b)));
+}
+
 /***************************************************************************
  *                Multiply
  ***************************************************************************/
@@ -194,9 +224,62 @@ INLINE __m128 _mm_mul_ps(__m128 a, __m128 b)
 	//SSE: (-2.33512e-28) * (-2.13992e-13)=4.99689e-41
 	return vmulq_f32(a, b);
 }
+
+/***************************************************************************
+ *                absdiff
+ ***************************************************************************/
+//#define _mm_absdiff_epu16(a,b) _mm_adds_epu16(_mm_subs_epu16(a, b), _mm_subs_epu16(b, a))
+
+/***************************************************************************
+ *                divides
+ ***************************************************************************/
+/* r0 := a0 / b0
+ * r1 := a1 / b1
+ * r2 := a2 / b2
+ * r3 := a3 / b3
+ * */
+INLINE __m128 _mm_div_ps(__m128 a, __m128 b )
+{
+	// get an initial estimate of 1/b.
+	float32x4_t reciprocal = vrecpeq_f32(b);
+
+	// use a couple Newton-Raphson steps to refine the estimate.  Depending on your
+	// application's accuracy requirements, you may be able to get away with only
+	// one refinement (instead of the two used here).  Be sure to test!
+	reciprocal = vmulq_f32(vrecpsq_f32(b, reciprocal), reciprocal);
+//	reciprocal = vmulq_f32(vrecpsq_f32(b, reciprocal), reciprocal);
+
+	// and finally, compute a/b = a*(1/b)
+	float32x4_t result = vmulq_f32(a,reciprocal);
+	return result;
+}
+
+
+/* Computes the square roots of the four single-precision, floating-point values of a.
+ * r0 := sqrt(a0)
+ * r1 := sqrt(a1)
+ * r2 := sqrt(a2)
+ * r3 := sqrt(a3)
+ * */
+INLINE __m128 _mm_sqrt_ps(__m128 in)
+{
+	__m128 recipsq = vrsqrteq_f32(in);
+	__m128 sq = vrecpeq_f32(recipsq);
+	// ??? use step versions of both sqrt and recip for better accuracy?
+	//precision loss
+	return sq;
+}
 /***************************************************************************
  *                logic
  ***************************************************************************/
+
+/* Computes the bitwise OR of the 128-bit value in a and the 128-bit value in b.
+ * r := a | b
+ * */
+INLINE __m128i _mm_or_si128(__m128i a, __m128i b)
+{
+	return (__m128i)vorrq_s32(a, b);
+}
 
 /* Computes the bitwise XOR of the 128-bit value in a and the 128-bit value in b. 
  * r := a ^ b
@@ -214,6 +297,16 @@ INLINE __m128i _mm_andnot_si128(__m128i a, __m128i b)
 	return vbicq_s32(b, a); // *NOTE* argument swap
 }
 
+/* Computes the bitwise AND-NOT of the four single-precision, floating-point values of a and b.
+ * r0 := ~a0 & b0
+ * r1 := ~a1 & b1
+ * r2 := ~a2 & b2
+ * r3 := ~a3 & b3
+ * */
+INLINE __m128 _mm_andnot_ps(__m128 a, __m128 b)
+{
+	return (__m128)vbicq_s32((__m128i)b, (__m128i)a); // *NOTE* argument swap
+}
 
 /* Computes the bitwise AND of the 128-bit value in a and the 128-bit value in b.
  * r := a & b
@@ -321,6 +414,15 @@ INLINE void _mm_storel_epi64(__m128i* a, __m128i b)
 	vst1_s32( (int32_t *) a, vget_low_s32((int32x4_t)b));
 }
 
+/* Stores the lower two single-precision, floating-point values of a to the address p.
+ * *p0 := b0
+ * *p1 := b1
+ * */
+INLINE void _mm_storel_pi( __m64 * p , __m128 a )
+{
+	vst1_f32((float32_t *)p, vget_low_f32((float32x4_t)a));
+}
+
 INLINE __m128 _mm_load_ss(const float * p)
 {
 	/* Loads an single-precision, floating-point value into the low word and clears the upper three words. */
@@ -368,6 +470,16 @@ INLINE __m128i _mm_set1_epi16 (short w)
 	return (__m128i)vdupq_n_s16((int16_t)w);
 }
 
+/* Sets the 4 signed 32-bit integer values to i.
+ * r0 := i
+ * r1 := i
+ * r2 := i
+ * r3 := I
+ * */
+INLINE __m128i _mm_set1_epi32(int i)
+{
+	return vdupq_n_s32(i);
+}
 /* Sets the four single-precision, floating-point values to w
  * r0 := r1 := r2 := r3 := w 
  * */
@@ -376,6 +488,12 @@ INLINE __m128 _mm_set1_ps(float w)
 	return vdupq_n_f32(w);
 }
 #define _mm_set_ps1 _mm_set1_ps
+
+INLINE __m128 _mm_set_ps(float w, float z, float y, float x)
+{
+	float __attribute__((aligned(16))) data[4] = {x,y,z,w};
+	return vld1q_f32(data);
+}
 
 //todo ~~~~~~~~~~~~~~~~~~~~~~~~~
 /* Snhuffles the 4 signed or unsigned 32-bit integers in a as specified by imm. */
@@ -486,6 +604,18 @@ INLINE __m128i _mm_unpacklo_epi8(__m128i a, __m128i b)
 	return (__m128i)vcombine_s8(r.val[0],r.val[1]);
 }
 
+/* Interleaves the lower 2 signed or unsigned 32-bit integers in a with the lower 2 signed or unsigned 32-bit integers in b.
+ * r0 := a0 ; r1 := b0
+ * r2 := a1 ; r3 := b1
+ * */
+INLINE __m128i _mm_unpacklo_epi32(__m128i a, __m128i b)
+{
+	int32x2_t a_l = vget_low_s32((int32x4_t)a);
+	int32x2_t b_l = vget_low_s32((int32x4_t)b);
+	int32x2x2_t r = vzip_s32(a_l, b_l);
+	return (__m128i)vcombine_s32(r.val[0],r.val[1]);
+}
+
 /* Interleaves the upper 4 signed or unsigned 16-bit integers in a with the upper 4 signed or unsigned 16-bit integers in b.
  * r0 := a4 ; r1 := b4
  * r2 := a5 ; r3 := b5
@@ -524,6 +654,30 @@ INLINE __m128i _mm_unpackhi_epi32(__m128i a, __m128i b)
 	return vcombine_s32(result.val[0], result.val[1]);
 }
 
+/* Selects and interleaves the lower two single-precision, floating-point values from a and b.
+ * r0 := a0
+ * r1 := b0
+ * r2 := a1
+ * r3 := b1
+ * */
+INLINE __m128 _mm_unpacklo_ps(__m128 a, __m128 b)
+{
+	float32x2x2_t result = vzip_f32(vget_low_f32(a), vget_low_f32(b));
+	return vcombine_f32(result.val[0], result.val[1]);
+}
+
+/* Selects and interleaves the upper two single-precision, floating-point values from a and b.
+ * r0 := a2
+ * r1 := b2
+ * r2 := a3
+ * r3 := b3
+ * */
+INLINE __m128 _mm_unpackhi_ps(__m128 a, __m128 b)
+{
+	float32x2x2_t result = vzip_f32(vget_high_f32(a), vget_high_f32(b));
+	return vcombine_f32(result.val[0], result.val[1]);
+}
+
 INLINE __m128 _mm_cvtepi32_ps(__m128i a)
 {
 	return vcvtq_f32_s32(a);
@@ -556,6 +710,29 @@ INLINE __m128i _mm_packus_epi16(const __m128i a, const __m128i b)
 {
 	return (__m128i)vcombine_u8(vqmovun_s16((int16x8_t)a), vqmovun_s16((int16x8_t)b));
 }
+
+/* Moves the lower two single-precision, floating-point values of b to the upper two single-precision, floating-point values of the result. 
+ * r3 := b1
+ * r2 := b0
+ * r1 := a1
+ * r0 := a0
+ * */
+INLINE __m128 _mm_movelh_ps( __m128 a, __m128 b )
+{
+	return vcombine_f32(vget_low_f32(a),vget_low_f32(b));
+}
+
+/* The upper two single-precision, floating-point values of a are passed through to the result.
+ * r3 := a3
+ * r2 := a2
+ * r1 := b3
+ * r0 := b2
+ * */
+INLINE __m128 _mm_movehl_ps( __m128 a, __m128 b )
+{
+	return vcombine_f32(vget_high_f32(b),vget_high_f32(a));
+}
+
 /***************************************************************************
  *                shift 
  ***************************************************************************/
@@ -573,5 +750,41 @@ INLINE __m128i _mm_srai_epi32 (__m128i a, int count)
 //	if immediate
 	return vshlq_s32(a, vdupq_n_s32(-count));
 }
+
+/* Shifts the 8 signed or unsigned 16-bit integers in a left by count bits while shifting in zeros.
+ * r0 := a0 << count
+ * r1 := a1 << count
+ * ...
+ * r7 := a7 << count
+ * */
+INLINE __m128i _mm_slli_epi16(__m128i a, int count)
+{
+//	todo :
+//	if immediate
+	return (__m128i)vshlq_s16((int16x8_t)a, vdupq_n_s16(count));
+}
+
+/* Shifts the 8 signed or unsigned 16-bit integers in a right by count bits while shifting in zeros.
+ * r0 := srl(a0, count)
+ * r1 := srl(a1, count)
+ * ...
+ * r7 := srl(a7, count)
+ * */
+INLINE __m128i _mm_srli_epi16(__m128i a, int count)
+{
+//	todo :
+//	if immediate
+	return (__m128i)vshlq_u16((uint16x8_t)a, vdupq_n_s16(-count));
+}
+
+/* Shifts the 128-bit value in a right by imm bytes while shifting in zeros. imm must be an immediate.
+ * r := srl(a, imm*8)
+ * */
+#define _mm_srli_si128( a, imm ) (__m128i)vextq_s8((int8x16_t)a, vdupq_n_s8(0), (imm))
+
+/* Shifts the 128-bit value in a left by imm bytes while shifting in zeros. imm must be an immediate.
+ * r := a << (imm * 8)*/
+//todo ::imm =0, compile error
+#define _mm_slli_si128( a, imm ) (__m128i)vextq_s8(vdupq_n_s8(0), (int8x16_t)a, 16 - (imm))
 
 #endif
