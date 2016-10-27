@@ -21,9 +21,9 @@
 #define GCC 1
 
 #if GCC
-#define INLINE					inline __attribute__((always_inline))
+#define INLINE		inline __attribute__((always_inline))
 #else
-#define INLINE					inline
+#define INLINE		inline
 #endif
 
 #include <arm_neon.h>
@@ -51,6 +51,19 @@ INLINE __m128i _mm_max_epi16 (__m128i a, __m128i b)
 	return (__m128i)vmaxq_s16((int16x8_t) a, (int16x8_t) b);
 }
 
+/* Return value
+ * A 128-bit parameter that can be defined with the following equations:
+ * r0 := (a0 > b0) ? a0 : b0
+ * r1 := (a1 > b1) ? a1 : b1
+ * r2 := (a2 > b2) ? a2 : b2
+ * r3 := (a3 > b3) ? a3 : b3
+ * */
+INLINE __m128i _mm_max_epi32(__m128i a, __m128i b)
+{
+	return vmaxq_s32(a,b);
+}
+
+
 /* todo: when the input data contain the NaN. => different behave
 	BUT, in actual use, NaN ?
 Need MORE tests?
@@ -68,6 +81,18 @@ INLINE __m128i _mm_min_epu8 (__m128i a, __m128i b)
 INLINE __m128i _mm_min_epi16(__m128i a, __m128i b)
 {
 	return (__m128i)vminq_s16((int16x8_t)a, (int16x8_t)b);
+}
+
+/* Return value
+ * A 128-bit parameter that can be defined with the following equations:
+ * r0 := (a0 < b0) ? a0 : b0
+ * r1 := (a1 < b1) ? a1 : b1
+ * r2 := (a2 < b2) ? a2 : b2
+ * r3 := (a3 < b3) ? a3 : b3
+ * */
+INLINE __m128i _mm_min_epi32(__m128i a, __m128i b)
+{
+	return vminq_s32(a,b);
 }
 
 /* todo: when the input data contain the NaN. => different behave
@@ -222,7 +247,30 @@ INLINE __m128 _mm_mul_ps(__m128 a, __m128 b)
 	//todo:
 	//NEON:(-2.33512e-28) * (-2.13992e-13)=0
 	//SSE: (-2.33512e-28) * (-2.13992e-13)=4.99689e-41
-	return vmulq_f32(a, b);
+//	return vmulq_f32(a, b);
+	__m128 ret;
+	ret[0] = a[0]*b[0];
+	ret[1] = a[1]*b[1];
+	ret[2] = a[2]*b[2];
+	ret[3] = a[3]*b[3];
+	return ret;
+}
+
+/* Multiplies the 8 signed 16-bit integers from a by the 8 signed 16-bit integers from b.
+ * __m128i _mm_madd_epi16 (__m128i a, __m128i b);
+ * PMADDWD
+ * Return Value
+ * Adds the signed 32-bit integer results pairwise and packs the 4 signed 32-bit integer results.
+ * r0 := (a0 * b0) + (a1 * b1)
+ * r1 := (a2 * b2) + (a3 * b3)
+ * r2 := (a4 * b4) + (a5 * b5)
+ * r3 := (a6 * b6) + (a7 * b7)
+ * */
+INLINE __m128i _mm_madd_epi16 (__m128i a, __m128i b)
+{
+	int32x4_t r_l = vmull_s16(vget_low_s16((int16x8_t)a), vget_low_s16((int16x8_t)b));
+	int32x4_t r_h = vmull_s16(vget_high_s16((int16x8_t)a), vget_high_s16((int16x8_t)b));
+	return vcombine_s32(vpadd_s32(vget_low_s32(r_l), vget_high_s32(r_l)), vpadd_s32(vget_low_s32(r_h), vget_high_s32(r_h)));
 }
 
 /***************************************************************************
@@ -230,6 +278,24 @@ INLINE __m128 _mm_mul_ps(__m128 a, __m128 b)
  ***************************************************************************/
 //#define _mm_absdiff_epu16(a,b) _mm_adds_epu16(_mm_subs_epu16(a, b), _mm_subs_epu16(b, a))
 
+/* Computes the absolute difference of the 16 unsigned 8-bit integers from a and the 16 unsigned 8-bit integers from b.
+ * __m128i _mm_sad_epu8 (__m128i a, __m128i b);
+ * PSADBW
+ * Return Value
+ * Sums the upper 8 differences and lower 8 differences and packs the resulting 2 unsigned 16-bit integers into the upper and lower 64-bit elements.
+ * r0 := abs(a0 - b0) + abs(a1 - b1) +...+ abs(a7 - b7)
+ * r1 := 0x0 ; r2 := 0x0 ; r3 := 0x0
+ * r4 := abs(a8 - b8) + abs(a9 - b9) +...+ abs(a15 - b15)
+ * r5 := 0x0 ; r6 := 0x0 ; r7 := 0x0
+ * */
+INLINE __m128i _mm_sad_epu8 (__m128i a, __m128i b)
+{
+	uint16x8_t t = vpaddlq_u8(vabdq_u8((uint8x16_t) a, (uint8x16_t) b));
+	uint16_t r0 = t[0]+t[1]+t[2]+t[3];
+	uint16_t r4 = t[4]+t[5]+t[6]+t[7];
+	uint16x8_t r = vsetq_lane_u16(r0,vdupq_n_u16(0),0);
+	return (__m128i)vsetq_lane_u16(r4,r,4);
+}
 /***************************************************************************
  *                divides
  ***************************************************************************/
@@ -267,6 +333,8 @@ INLINE __m128 _mm_sqrt_ps(__m128 in)
 	__m128 sq = vrecpeq_f32(recipsq);
 	// ??? use step versions of both sqrt and recip for better accuracy?
 	//precision loss
+//	__m128 recipsq = vrsqrtsq_f32(in,vdupq_n_f32(1.0));
+//	__m128 sq = vrecpsq_f32(recipsq,vdupq_n_f32(1.0));
 	return sq;
 }
 /***************************************************************************
@@ -414,6 +482,20 @@ INLINE void _mm_storel_epi64(__m128i* a, __m128i b)
 	vst1_s32( (int32_t *) a, vget_low_s32((int32x4_t)b));
 }
 
+/* Sets the lower two single-precision, floating-point values with 64 bits of data loaded from the address p; the upper two values are passed through from a.
+ * __m128 _mm_loadl_pi( __m128 a , __m64 * p );
+ * MOVLPS reg, mem
+ * Return Value
+ *  r0 := *p0
+ *  r1 := *p1
+ *  r2 := a2
+ *  r3 := a3
+ *  */
+INLINE __m128 _mm_loadl_pi( __m128 a , __m64 const * p )
+{
+	return vcombine_f32(vld1_f32((float32_t const *)p),vget_high_f32(a));
+}
+
 /* Stores the lower two single-precision, floating-point values of a to the address p.
  * *p0 := b0
  * *p1 := b1
@@ -493,6 +575,21 @@ INLINE __m128 _mm_set_ps(float w, float z, float y, float x)
 {
 	float __attribute__((aligned(16))) data[4] = {x,y,z,w};
 	return vld1q_f32(data);
+}
+
+/* Sets the 8 signed 16-bit integer values in reverse order.
+ * __m128i _mm_setr_epi16 (short w0, short w1,    short w2, short w3,   short w4, short w5,   short w6, short w7);
+ * (composite)
+ * Return Value
+ *  r0 := w0
+ *  r1 := w1
+ *  ...
+ *  r7 := w7
+ *  */
+INLINE __m128i _mm_setr_epi16 (short w0, short w1,    short w2, short w3,   short w4, short w5,   short w6, short w7)
+{
+	short __attribute__ ((aligned (16))) data[8] = { w0, w1, w2, w3, w4, w5, w6, w7 };
+	return (__m128i)vld1q_s16((int16_t*)data);
 }
 
 //todo ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -616,6 +713,26 @@ INLINE __m128i _mm_unpacklo_epi32(__m128i a, __m128i b)
 	return (__m128i)vcombine_s32(r.val[0],r.val[1]);
 }
 
+INLINE __m128i _mm_unpacklo_epi64(__m128i a, __m128i b)
+{
+	int64x1_t a_l = vget_low_s64((int64x2_t)a);
+	int64x1_t b_l = vget_low_s64((int64x2_t)b);
+	return (__m128i)vcombine_s64(a_l, b_l);
+}
+
+/* Interleaves the upper signed or unsigned 64-bit integer in a with the upper signed or unsigned 64-bit integer in b.
+ * __m128i _mm_unpackhi_epi64 (__m128i a, __m128i b);
+ * PUNPCKHQDQ
+ * Return Value
+ *  r0 := a1 ; r1 := b1
+ *  */
+INLINE __m128i _mm_unpackhi_epi64(__m128i a, __m128i b)
+{
+	int64x1_t a_h = vget_high_s64((int64x2_t)a);
+	int64x1_t b_h = vget_high_s64((int64x2_t)b);
+	return (__m128i)vcombine_s64(a_h, b_h);
+}
+
 /* Interleaves the upper 4 signed or unsigned 16-bit integers in a with the upper 4 signed or unsigned 16-bit integers in b.
  * r0 := a4 ; r1 := b4
  * r2 := a5 ; r3 := b5
@@ -692,7 +809,14 @@ INLINE __m128i _mm_cvtps_epi32(__m128 a)
 {
 	//todo:precision
 	//NaN -0
+	//
 	return vcvtq_s32_f32(a);
+//	__m128i ret;
+//	ret[0] = (int64_t)a[0];
+//	ret[1] = (int64_t)a[1];
+//	ret[2] = (int64_t)a[2];
+//	ret[3] = (int64_t)a[3];
+//	return ret;
 }
 
 /* Packs the 16 signed 16-bit integers from a and b into 8-bit unsigned integers and saturates.
@@ -749,6 +873,20 @@ INLINE __m128i _mm_srai_epi32 (__m128i a, int count)
 //	todo :
 //	if immediate
 	return vshlq_s32(a, vdupq_n_s32(-count));
+}
+
+/* Shifts the 8 signed 16-bit integers in a right by count bits while shifting in the sign bit.
+ *  r0 := a0 >> count
+ *  r1 := a1 >> count
+ *  ...
+ *  r7 := a7 >> count
+ *  */
+INLINE __m128i _mm_srai_epi16 (__m128i a, int count)
+{
+//	return vshrq_n_s16(a, count);
+//	todo :
+//	if immediate
+	return (__m128i)vshlq_s16((int16x8_t)a, vdupq_n_s16(-count));
 }
 
 /* Shifts the 8 signed or unsigned 16-bit integers in a left by count bits while shifting in zeros.
